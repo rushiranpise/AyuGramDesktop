@@ -73,6 +73,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 #include "styles/style_chat.h"
 
+#include "ayu/ayu_settings.h"
+
 namespace {
 
 constexpr auto kNotificationTextLimit = 255;
@@ -2386,6 +2388,11 @@ void HistoryItem::setForwardsCount(int count) {
 }
 
 void HistoryItem::setPostAuthor(const QString &author) {
+    const auto settings = &AyuSettings::getInstance();
+    if (settings->keepDeletedMessages && !(_flags & MessageFlag::HasPostAuthor)) {
+        _flags |= MessageFlag::HasPostAuthor;
+    }
+
 	auto msgsigned = Get<HistoryMessageSigned>();
 	if (author.isEmpty()) {
 		if (!msgsigned) {
@@ -2404,6 +2411,11 @@ void HistoryItem::setPostAuthor(const QString &author) {
 	msgsigned->author = author;
 	msgsigned->isAnonymousRank = !isDiscussionPost()
 		&& this->author()->isMegagroup();
+
+    if (settings->keepDeletedMessages) {
+        history()->owner().requestItemViewRefresh(this);
+    }
+
 	history()->owner().requestItemResize(this);
 }
 

@@ -95,6 +95,30 @@ nice_target_sources(Telegram ${src_loc}
 PRIVATE
     ${style_files}
 
+    ayu/qserializer.h
+    ayu/ayu_state.cpp
+    ayu/ayu_state.h
+    ayu/ayu_settings.cpp
+    ayu/ayu_settings.h
+    ayu/boxes/confirmation_box.cpp
+    ayu/boxes/confirmation_box.h
+    ayu/boxes/edit_deleted_mark.cpp
+    ayu/boxes/edit_deleted_mark.h
+    ayu/boxes/edit_edited_mark.cpp
+    ayu/boxes/edit_edited_mark.h
+    ayu/context_menu/context_menu.cpp
+    ayu/context_menu/context_menu.h
+    ayu/context_menu/message_history_box.cpp
+    ayu/context_menu/message_history_box.h
+    ayu/settings/settings_ayu.cpp
+    ayu/settings/settings_ayu.h
+    ayu/sqlite/sqlite3.c
+    ayu/sqlite/sqlite3.h
+    ayu/sqlite/sqlite_orm.h
+    ayu/database/entities.h
+    ayu/database/ayu_database.cpp
+    ayu/database/ayu_database.h
+
     api/api_attached_stickers.cpp
     api/api_attached_stickers.h
     api/api_authorizations.cpp
@@ -1560,9 +1584,9 @@ else()
     set(bundle_identifier "com.tdesktop.Telegram$<$<CONFIG:Debug>:Debug>")
     set(bundle_entitlements "Telegram.entitlements")
     if (LINUX AND DESKTOP_APP_USE_PACKAGED)
-        set(output_name "telegram-desktop")
+        set(output_name "ayugram-desktop")
     else()
-        set(output_name "Telegram")
+        set(output_name "AyuGram")
     endif()
 endif()
 
@@ -1601,7 +1625,7 @@ PRIVATE
 if (APPLE
     OR "${CMAKE_GENERATOR}" STREQUAL "Ninja Multi-Config"
     OR NOT CMAKE_EXECUTABLE_SUFFIX STREQUAL ""
-    OR NOT "${output_name}" STREQUAL "Telegram")
+    OR NOT "${output_name}" STREQUAL "AyuGram")
     set(output_folder ${CMAKE_BINARY_DIR})
 else()
     set(output_folder ${CMAKE_BINARY_DIR}/bin)

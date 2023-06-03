@@ -180,4 +180,6 @@ void MarkAsReadThread(not_null<Data::Thread*> thread);
 
 void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction);
 
+void MarkAsReadChatListHack(not_null<Dialogs::MainList*> list);
+
 } // namespace Window
