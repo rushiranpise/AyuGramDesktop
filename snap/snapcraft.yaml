@@ -19,7 +19,7 @@ apps:
     command-chain:
       - bin/desktop-launch
     common-id: org.telegram.desktop
-    desktop: usr/share/applications/org.telegram.desktop.desktop
+    desktop: usr/share/applications/org.ayugram.desktop.desktop
     autostart: telegram-desktop_telegram-desktop.desktop
     plugs:
       - alsa
@@ -91,7 +91,7 @@ parts:
     plugin: cmake
     source: .
     source-type: git
-    parse-info: [usr/share/metainfo/org.telegram.desktop.metainfo.xml]
+    parse-info: [usr/share/metainfo/org.ayugram.desktop.metainfo.xml]
     build-environment:
       - LD_LIBRARY_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
       - LDFLAGS: ${LDFLAGS:+$LDFLAGS} -s

@@ -110,7 +110,7 @@ static void t_desktop_application_init(TDesktopApplication *application) {
 namespace Platform {
 namespace {
 
-constexpr auto kDesktopFile = ":/misc/org.telegram.desktop.desktop"_cs;
+constexpr auto kDesktopFile = ":/misc/org.ayugram.desktop.desktop"_cs;
 
 bool PortalAutostart(bool start, bool silent) {
 	if (cExeName().isEmpty()) {
@@ -485,7 +485,7 @@ bool GenerateDesktopFile(
 			hashMd5Hex(exePath.constData(), exePath.size(), md5Hash);
 		}
 
-		QFile::remove(u"%1org.telegram.desktop.%2.desktop"_q.arg(
+		QFile::remove(u"%1org.ayugram.desktop.%2.desktop"_q.arg(
 			targetPath,
 			md5Hash));
 	}
@@ -686,11 +686,11 @@ void start() {
 					md5Hash.data());
 			}
 
-			return u"org.telegram.desktop._%1.desktop"_q.arg(
+			return u"org.ayugram.desktop._%1.desktop"_q.arg(
 				md5Hash.constData());
 		}
 
-		return u"org.telegram.desktop.desktop"_q;
+		return u"org.ayugram.desktop.desktop"_q;
 	}());
 
 	LOG(("Launcher filename: %1").arg(QGuiApplication::desktopFileName()));
