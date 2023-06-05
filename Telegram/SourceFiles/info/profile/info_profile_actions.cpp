@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
 
+#include "ayu/ayu_settings.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
 #include "data/data_folder.h"
@@ -15,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_user.h"
 #include "data/notify/data_notify_settings.h"
+#include "ui/text/text_entity.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
@@ -66,6 +68,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
+
+#include "ayu/utils/ayu_profile_values.h"
 
 namespace Info {
 namespace Profile {
@@ -283,6 +287,8 @@ bool SetClickContext(
 }
 
 object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
+    auto settings = &AyuSettings::getInstance();
+
 	auto result = object_ptr<Ui::VerticalLayout>(_wrap);
 	auto tracker = Ui::MultiSlideTracker();
 
@@ -475,6 +481,29 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			});
 		}
 
+        if (settings->showPeerId != 0) {
+            auto idDrawableText = IDValue(
+                    user
+            ) | rpl::map([](TextWithEntities &&text) {
+                return Ui::Text::Code(text.text);
+            });
+            auto idInfo = addInfoOneLine(
+                    rpl::single(QString("ID")),
+                    std::move(idDrawableText),
+                    tr::ayu_ContextCopyID(tr::now)
+            );
+
+            idInfo.text->setClickHandlerFilter([=](auto &&...) {
+                const auto idText = IDString(user);
+                if (!idText.isEmpty()) {
+                    QGuiApplication::clipboard()->setText(idText);
+                    const auto msg = tr::ayu_IDCopiedToast(tr::now);
+                    controller->showToast(msg);
+                }
+                return false;
+            });
+        }
+
 		AddMainButton(
 			result,
 			tr::lng_info_add_as_contact(),
@@ -535,6 +564,29 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 		if (!_topic) {
 			addTranslateToMenu(about.text, AboutValue(_peer));
 		}
+
+        if (settings->showPeerId != 0) {
+            auto idDrawableText = IDValue(
+                    _peer
+            ) | rpl::map([](TextWithEntities &&text) {
+                return Ui::Text::Code(text.text);
+            });
+            auto idInfo = addInfoOneLine(
+                    rpl::single(QString("ID")),
+                    std::move(idDrawableText),
+                    tr::ayu_ContextCopyID(tr::now)
+            );
+
+            idInfo.text->setClickHandlerFilter([=, peer = _peer](auto &&...) {
+                const auto idText = IDString(peer);
+                if (!idText.isEmpty()) {
+                    QGuiApplication::clipboard()->setText(idText);
+                    const auto msg = tr::ayu_IDCopiedToast(tr::now);
+                    controller->showToast(msg);
+                }
+                return false;
+            });
+        }
 	}
 	if (!_peer->isSelf()) {
 		// No notifications toggle for Self => no separator.
