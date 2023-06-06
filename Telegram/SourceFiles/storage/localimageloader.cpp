@@ -54,6 +54,7 @@ base::options::toggle SendLargePhotos({
 	.id = kOptionSendLargePhotos,
 	.name = "Send large photos",
 	.description = "Increase the side limit on compressed images to 2560px.",
+    .defaultValue = true
 });
 std::atomic<bool> SendLargePhotosAtomic/* = false*/;
 
