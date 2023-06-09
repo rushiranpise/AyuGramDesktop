@@ -54,6 +54,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtWidgets/QApplication>
 
+#include "ayu/ayu_settings.h"
+
 namespace ChatHelpers {
 namespace {
 
@@ -2089,8 +2091,10 @@ auto StickersListWidget::collectRecentStickers() -> std::vector<Sticker> {
 	result.reserve(cloudCount + recent.size() + customCount);
 	_custom.reserve(cloudCount + recent.size() + customCount);
 
+    auto settings = &AyuSettings::getInstance();
+
 	auto add = [&](not_null<DocumentData*> document, bool custom) {
-		if (result.size() >= kRecentDisplayLimit) {
+		if (result.size() >= settings->recentStickersCount) {
 			return;
 		}
 		const auto i = ranges::find(result, document, &Sticker::document);
