@@ -22,6 +22,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image_location_factory.h"
 #include "ui/text/text_utilities.h" // Ui::Text::RichLangValue.
 
+#include "ayu/ayu_settings.h"
+
 namespace Data {
 namespace {
 
@@ -175,7 +177,8 @@ void SponsoredMessages::inject(
 }
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
-	return history->peer->isChannel();
+    auto settings = &AyuSettings::getInstance();
+	return settings->enableAds && history->peer->isChannel();
 }
 
 void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
