@@ -1726,7 +1726,7 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
                     };
 
                     Ui::show(Ui::MakeConfirmBox({
-                            .text = rpl::single(QString("Do you want to send sticker?")),
+                            .text = rpl::single(QString("Do you want to send this sticker?")),
                             .confirmed = sendStickerCallback,
                             .confirmText = rpl::single(QString("Send")),
                     }));
