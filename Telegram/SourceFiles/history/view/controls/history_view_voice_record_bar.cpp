@@ -5,6 +5,8 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include <ayu/ayu_settings.h>
+#include <ayu/boxes/voice_confirmation_box.h>
 #include "history/view/controls/history_view_voice_record_bar.h"
 
 #include "api/api_send_progress.h"
@@ -35,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/ripple_animation.h"
 #include "ui/text/format_values.h"
 #include "ui/painter.h"
+#include "boxes/abstract_box.h"
 
 namespace HistoryView::Controls {
 
@@ -1426,8 +1429,24 @@ void VoiceRecordBar::stopRecording(StopType type) {
 		window()->raise();
 		window()->activateWindow();
 		const auto duration = Duration(data.samples);
+        auto settings = &AyuSettings::getInstance();
+
 		if (type == StopType::Send) {
-			_sendVoiceRequests.fire({ data.bytes, data.waveform, duration });
+            auto sendVoiceCallback = [=, this] {
+                _sendVoiceRequests.fire({ data.bytes, data.waveform, duration });
+            };
+
+            if (settings->voiceConfirmation) {
+                Ui::show(AyuUi::MakeConfirmBox({
+                        .text = rpl::single(QString("Do you want to send voice message?")),
+                        .confirmed = sendVoiceCallback,
+                        .confirmText = rpl::single(QString("Send"))
+                }));
+            }
+            else {
+                sendVoiceCallback();
+            }
+
 		} else if (type == StopType::Listen) {
 			_listen = std::make_unique<ListenWrap>(
 				this,
@@ -1500,11 +1519,27 @@ void VoiceRecordBar::drawMessage(Painter &p, float64 recordActive) {
 void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 	if (isListenState()) {
 		const auto data = _listen->data();
-		_sendVoiceRequests.fire({
-			data->bytes,
-			data->waveform,
-			Duration(data->samples),
-			options });
+        auto settings = &AyuSettings::getInstance();
+
+        auto sendVoiceCallback = [=, this] {
+            _sendVoiceRequests.fire({
+                data->bytes,
+                data->waveform,
+                Duration(data->samples),
+                options
+            });
+        };
+
+        if (settings->voiceConfirmation) {
+            Ui::show(AyuUi::MakeConfirmBox({
+                    .text = rpl::single(QString("Do you want to send voice message?")),
+                    .confirmed = sendVoiceCallback,
+                    .confirmText = rpl::single(QString("Send"))
+            }));
+        }
+        else {
+            sendVoiceCallback();
+        }
 	}
 }
 
