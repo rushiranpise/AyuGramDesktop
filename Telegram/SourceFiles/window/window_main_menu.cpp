@@ -851,7 +851,7 @@ void MainMenu::setupMenu() {
         _ghostModeToggle = addAction(
                 tr::ayu_DrawerGhostModeToggle(),
                 {&st::ayuGhostIcon, kIconPurple}
-        )->toggleOn(AyuSettings::get_ghostModeEnabled());
+        )->toggleOn(AyuSettings::get_ghostModeEnabledReactive());
 
         _ghostModeToggle->toggledChanges(
         ) | rpl::start_with_next([=](bool ghostMode) {
