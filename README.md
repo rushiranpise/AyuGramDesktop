@@ -35,3 +35,17 @@ Make sure you have these components installed with VS Build Tools:
 - C++ MFC latest (x86 & x64)
 - C++ ATL latest (x86 & x64)
 - latest Windows 11 SDK
+
+## Credits
+
+- [Telegram Desktop](https://github.com/telegramdesktop/tdesktop)
+- [Kotatogram](https://github.com/kotatogram/kotatogram-desktop)
+- [64Gram](https://github.com/TDesktop-x64/tdesktop)
+- [SQLite](https://github.com/sqlite/sqlite)
+- [sqlite_orm](https://github.com/fnc12/sqlite_orm)
+
+### Very special thanks to
+
+- [JSON for Modern C++](https://github.com/nlohmann/json)
+- [BitConverter](https://github.com/YanjieHe/BitConverter)
+- [Not Enough Standards](https://github.com/Alairion/not-enough-standards)
