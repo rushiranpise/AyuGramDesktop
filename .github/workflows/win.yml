@@ -172,7 +172,7 @@ jobs:
         uses: Hs1r1us/Release-AIO@v1.0
         env:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
+        with:
         # The name of the tag
           tag_name: prelease-${{ github.run_number }}
           prerelease: true
