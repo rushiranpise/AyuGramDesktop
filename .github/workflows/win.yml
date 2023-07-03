@@ -138,6 +138,7 @@ jobs:
           del /S Libraries\*.obj
 
       - name: Telegram Desktop build.
+        continue-on-error: true
         if: env.ONLY_CACHE == 'false'
         run: |
           cd %TBUILD%\%REPO_NAME%\Telegram
@@ -154,24 +155,28 @@ jobs:
           msbuild -m Telegram.sln /p:Configuration=Debug,Platform=${{ matrix.arch }},DebugSymbols=false,DebugType=none
 
       - name: Move artifact.
+        continue-on-error: true
         if: (env.UPLOAD_ARTIFACT == 'true') || ${{ github.ref == 'refs/heads/nightly' }}
         run: |
           mkdir artifact
           move %TBUILD%\%REPO_NAME%\out\Debug\AyuGram.exe artifact/
       - uses: actions/upload-artifact@master
         name: Upload artifact.
+        continue-on-error: true
         if: (env.UPLOAD_ARTIFACT == 'true') || ${{ github.ref == 'refs/heads/nightly' }}
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact\
 
       - name: Create pre-release.
+        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           git tag prerelease
           git push origin prerelease
 
       - name: Get commit messages since last release
+        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         id: commit_messages
         run: |
@@ -179,12 +184,14 @@ jobs:
           git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:'%s' > commit_messages.txt
 
       - name: Create commit messages file
+        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           echo "Commit messages since last release:"
           cat commit_messages.txt
 
       - name: Commit and push changes
+        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           git config --local user.email "actions@github.com"
@@ -195,6 +202,7 @@ jobs:
           git push origin pre-release
 
       - name: Create release
+        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/create-release@v1
         with:
