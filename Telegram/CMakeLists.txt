@@ -122,6 +122,7 @@ PRIVATE
     ayu/sync/models.h
     ayu/sync/utils/ayu_pipe_wrapper.cpp
     ayu/sync/utils/ayu_pipe_wrapper.h
+    ayu/sync/utils/process_utils.hpp
     ayu/libs/pipe.hpp
     ayu/libs/json.hpp
     ayu/libs/json_ext.hpp
