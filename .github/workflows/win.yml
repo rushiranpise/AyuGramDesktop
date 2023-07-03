@@ -168,13 +168,28 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact\
 
-      - name: Upload release
-        uses: Hs1r1us/Release-AIO@v1.0
-        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
+  release:
+    name: Release
+    needs: [windows]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Merge Releases
+      uses: actions/download-artifact@v2
+      with:
+        name: Telegram_Win32
+        path: artifact
+
+    - name: Upload release
+      uses: Hs1r1us/Release-AIO@v1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
         # The name of the tag
-          tag_name: prelease-${{ github.run_number }}
-          prerelease: true
-          release_name: Ayugram CI
-          asset_files: artifact\
+        tag_name: prelease-${{ github.run_number }}
+        prerelease: true
+        release_name: Ayugram CI
+        asset_files: './artifact'
