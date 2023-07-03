@@ -168,46 +168,13 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact\
 
-      - name: Create pre-release.
-        continue-on-error: true
-        if: env.UPLOAD_ARTIFACT == 'true'
-        run: |
-          git tag prerelease
-          git push origin prerelease
-
-      - name: Get commit messages since last release
-        continue-on-error: true
-        if: env.UPLOAD_ARTIFACT == 'true'
-        id: commit_messages
-        run: |
-          git fetch --prune --unshallow
-          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:'%s' > commit_messages.txt
-
-      - name: Create commit messages file
-        continue-on-error: true
-        if: env.UPLOAD_ARTIFACT == 'true'
-        run: |
-          echo "Commit messages since last release:"
-          cat commit_messages.txt
-
-      - name: Commit and push changes
-        continue-on-error: true
-        if: env.UPLOAD_ARTIFACT == 'true'
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git checkout -b pre-release
-          git add commit_messages.txt
-          git commit -m "Add commit messages since last release"
-          git push origin pre-release
-
-      - name: Create release
-        continue-on-error: true
-        if: env.UPLOAD_ARTIFACT == 'true'
-        uses: actions/create-release@v1
-        with:
-          tag_name: prerelease
-          release_name: Pre-Release
-          body_file: commit_messages.txt
-          draft: false
+      - name: Upload release
+        uses: Hs1r1us/Release-AIO@v1.0
+        env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+        # The name of the tag
+          tag_name: prelease-${{ github.run_number }}
           prerelease: true
+          release_name: Ayugram CI
+          asset_files: artifact\
