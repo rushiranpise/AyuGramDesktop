@@ -2389,7 +2389,7 @@ void HistoryItem::setForwardsCount(int count) {
 
 void HistoryItem::setPostAuthor(const QString &author) {
 	const auto settings = &AyuSettings::getInstance();
-	if (settings->keepDeletedMessages && !(_flags & MessageFlag::HasPostAuthor))
+	if (settings->saveDeletedMessages && !(_flags & MessageFlag::HasPostAuthor))
 	{
 		_flags |= MessageFlag::HasPostAuthor;
 	}
@@ -2413,7 +2413,7 @@ void HistoryItem::setPostAuthor(const QString &author) {
 	msgsigned->isAnonymousRank = !isDiscussionPost()
 		&& this->author()->isMegagroup();
 
-	if (settings->keepDeletedMessages)
+	if (settings->saveDeletedMessages)
 	{
 		history()->owner().requestItemViewRefresh(this);
 	}
