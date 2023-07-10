@@ -177,7 +177,7 @@ void SponsoredMessages::inject(
 }
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
-    auto settings = &AyuSettings::getInstance();
+	auto settings = &AyuSettings::getInstance();
 	return settings->enableAds && history->peer->isChannel();
 }
 
