@@ -28,9 +28,11 @@ apps:
       - camera
       - desktop
       - desktop-legacy
+      - gsettings
       - hardware-observe
       - home
       - network
+      - network-bind
       - network-status
       - opengl
       - removable-media
@@ -52,7 +54,6 @@ plugs:
     mount-host-font-cache: false
   # Support for common GTK themes
   # https://forum.snapcraft.io/t/how-to-use-the-system-gtk-theme-via-the-gtk-common-themes-snap/6235
-  gsettings:
   gtk-3-themes:
     interface: content
     target: $SNAP/data-dir/themes

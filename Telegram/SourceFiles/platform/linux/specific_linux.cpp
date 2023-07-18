@@ -8,20 +8,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/linux/specific_linux.h"
 
 #include "base/random.h"
-#include "base/options.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_dbus_utilities.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 #include "platform/linux/linux_desktop_environment.h"
 #include "platform/linux/linux_wayland_integration.h"
-#include "platform/platform_launcher.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
 #include "storage/localstorage.h"
-#include "core/sandbox.h"
+#include "core/launcher.h"
 #include "core/application.h"
-#include "core/local_url_handlers.h"
 #include "core/core_settings.h"
 #include "core/update_checker.h"
 #include "window/window_controller.h"
@@ -35,7 +32,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QSystemTrayIcon>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QProcess>
-#include <QtCore/QAbstractEventDispatcher>
 
 #include <kshell.h>
 #include <ksandbox.h>
@@ -55,57 +51,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 using namespace Platform;
 using Platform::internal::WaylandIntegration;
-
-typedef GApplication TDesktopApplication;
-typedef GApplicationClass TDesktopApplicationClass;
-
-G_DEFINE_TYPE(
-	TDesktopApplication,
-	t_desktop_application,
-	G_TYPE_APPLICATION)
-
-static void t_desktop_application_class_init(
-		TDesktopApplicationClass *klass) {
-	const auto application_class = G_APPLICATION_CLASS(klass);
-
-	application_class->before_emit = [](
-			GApplication *application,
-			GVariant *platformData) {
-		if (Platform::IsWayland()) {
-			static const auto keys = {
-				"activation-token",
-				"desktop-startup-id",
-			};
-			for (const auto &key : keys) {
-				const char *token = nullptr;
-				g_variant_lookup(platformData, key, "&s", &token);
-				if (token) {
-					qputenv("XDG_ACTIVATION_TOKEN", token);
-					break;
-				}
-			}
-		}
-	};
-
-	application_class->add_platform_data = [](
-			GApplication *application,
-			GVariantBuilder *builder) {
-		if (Platform::IsWayland()) {
-			const auto token = qgetenv("XDG_ACTIVATION_TOKEN");
-			if (!token.isEmpty()) {
-				g_variant_builder_add(
-					builder,
-					"{sv}",
-					"activation-token",
-					g_variant_new_string(token.constData()));
-				qunsetenv("XDG_ACTIVATION_TOKEN");
-			}
-		}
-	};
-}
-
-static void t_desktop_application_init(TDesktopApplication *application) {
-}
 
 namespace Platform {
 namespace {
@@ -138,7 +83,7 @@ bool PortalAutostart(bool start, bool silent) {
 
 		std::vector<Glib::ustring> commandline;
 		commandline.push_back(cExeName().toStdString());
-		if (Core::Sandbox::Instance().customWorkingDir()) {
+		if (Core::Launcher::Instance().customWorkingDir()) {
 			commandline.push_back("-workdir");
 			commandline.push_back(cWorkingDir().toStdString());
 		}
@@ -232,121 +177,13 @@ bool PortalAutostart(bool start, bool silent) {
 	return !error;
 }
 
-void LaunchGApplication() {
-	Glib::signal_idle().connect_once([] {
-		const auto appId = QGuiApplication::desktopFileName()
-			.chopped(8)
-			.toStdString();
-
-		const auto app = Glib::wrap(
-			G_APPLICATION(
-				g_object_new(
-					t_desktop_application_get_type(),
-					"application-id",
-					Gio::Application::id_is_valid(appId)
-						? appId.c_str()
-						: nullptr,
-					"flags",
-					G_APPLICATION_HANDLES_OPEN,
-					nullptr)));
-
-		app->signal_startup().connect([=] {
-			// GNotification
-			InvokeQueued(qApp, [] {
-				Core::App().notifications().createManager();
-			});
-
-			QEventLoop().exec();
-			app->quit();
-		}, true);
-
-		app->signal_activate().connect([] {
-			Core::Sandbox::Instance().customEnterFromEventLoop([] {
-				if (Core::IsAppLaunched()) {
-					Core::App().activate();
-				}
-			});
-		}, true);
-
-		app->signal_open().connect([](
-				const Gio::Application::type_vec_files &files,
-				const Glib::ustring &hint) {
-			Core::Sandbox::Instance().customEnterFromEventLoop([&] {
-				for (const auto &file : files) {
-					QFileOpenEvent e(
-						QUrl(QString::fromStdString(file->get_uri())));
-					QGuiApplication::sendEvent(qApp, &e);
-				}
-			});
-		}, true);
-
-		app->add_action("quit", [] {
-			Core::Sandbox::Instance().customEnterFromEventLoop([] {
-				Core::Quit();
-			});
-		});
-
-		using Window::Notifications::Manager;
-		using NotificationId = Manager::NotificationId;
-		using NotificationIdTuple = std::invoke_result_t<
-			decltype(&NotificationId::toTuple),
-			NotificationId*
-		>;
-
-		const auto notificationIdVariantType = [] {
-			try {
-				return base::Platform::MakeGlibVariant(
-					NotificationId().toTuple()).get_type();
-			} catch (...) {
-				return Glib::VariantType();
-			}
-		}();
-
-		app->add_action_with_parameter(
-			"notification-activate",
-			notificationIdVariantType,
-			[](const Glib::VariantBase &parameter) {
-				Core::Sandbox::Instance().customEnterFromEventLoop([&] {
-					try {
-						const auto &app = Core::App();
-						app.notifications().manager().notificationActivated(
-							NotificationId::FromTuple(
-								base::Platform::GlibVariantCast<
-									NotificationIdTuple
-								>(parameter)));
-					} catch (...) {
-					}
-				});
-			});
-
-		app->add_action_with_parameter(
-			"notification-mark-as-read",
-			notificationIdVariantType,
-			[](const Glib::VariantBase &parameter) {
-				Core::Sandbox::Instance().customEnterFromEventLoop([&] {
-					try {
-						const auto &app = Core::App();
-						app.notifications().manager().notificationReplied(
-							NotificationId::FromTuple(
-								base::Platform::GlibVariantCast<
-									NotificationIdTuple
-								>(parameter)),
-							{});
-					} catch (...) {
-					}
-				});
-			});
-
-		app->run(0, nullptr);
-	});
-}
-
 bool GenerateDesktopFile(
 		const QString &targetPath,
 		const QStringList &args = {},
 		bool onlyMainGroup = false,
 		bool silent = false) {
-	if (targetPath.isEmpty() || cExeName().isEmpty()) {
+	const auto executable = ExecutablePathForShortcuts();
+	if (targetPath.isEmpty() || executable.isEmpty()) {
 		return false;
 	}
 
@@ -388,11 +225,7 @@ bool GenerateDesktopFile(
 				target->set_string(
 					group,
 					"TryExec",
-					KShell::joinArgs({
-						!Core::UpdaterDisabled()
-							? (cExeDir() + cExeName())
-							: cExeName()
-					}).replace(
+					KShell::joinArgs({ executable }).replace(
 						'\\',
 						qstr("\\\\")).toStdString());
 			}
@@ -400,10 +233,8 @@ bool GenerateDesktopFile(
 			if (target->has_key(group, "Exec")) {
 				if (group == "Desktop Entry" && !args.isEmpty()) {
 					QStringList exec;
-					exec.append(!Core::UpdaterDisabled()
-						? (cExeDir() + cExeName())
-						: cExeName());
-					if (Core::Sandbox::Instance().customWorkingDir()) {
+					exec.append(executable);
+					if (Core::Launcher::Instance().customWorkingDir()) {
 						exec.append(u"-workdir"_q);
 						exec.append(cWorkingDir());
 					}
@@ -423,10 +254,8 @@ bool GenerateDesktopFile(
 							qstr("\\")));
 
 					if (!exec.isEmpty()) {
-						exec[0] = !Core::UpdaterDisabled()
-							? (cExeDir() + cExeName())
-							: cExeName();
-						if (Core::Sandbox::Instance().customWorkingDir()) {
+						exec[0] = executable;
+						if (Core::Launcher::Instance().customWorkingDir()) {
 							exec.insert(1, u"-workdir"_q);
 							exec.insert(2, cWorkingDir());
 						}
@@ -479,7 +308,7 @@ bool GenerateDesktopFile(
 		const auto d = QFile::encodeName(QDir(cWorkingDir()).absolutePath());
 		hashMd5Hex(d.constData(), d.size(), md5Hash);
 
-		if (!Core::Sandbox::Instance().customWorkingDir()) {
+		if (!Core::Launcher::Instance().customWorkingDir()) {
 			const auto exePath = QFile::encodeName(
 				cExeDir() + cExeName());
 			hashMd5Hex(exePath.constData(), exePath.size(), md5Hash);
@@ -489,6 +318,55 @@ bool GenerateDesktopFile(
 			targetPath,
 			md5Hash));
 	}
+
+	return true;
+}
+
+bool GenerateServiceFile(bool silent = false) {
+	const auto executable = ExecutablePathForShortcuts();
+	if (executable.isEmpty()) {
+		return false;
+	}
+
+	const auto targetPath = QStandardPaths::writableLocation(
+		QStandardPaths::GenericDataLocation) + u"/dbus-1/services/"_q;
+
+	const auto targetFile = targetPath
+		+ QGuiApplication::desktopFileName().chopped(8)
+		+ u".service"_q;
+
+	DEBUG_LOG(("App Info: placing .service file to %1").arg(targetPath));
+	if (!QDir(targetPath).exists()) QDir().mkpath(targetPath);
+
+	const auto target = Glib::KeyFile::create();
+	constexpr auto group = "D-BUS Service";
+
+	target->set_string(
+		group,
+		"Name",
+		QGuiApplication::desktopFileName().chopped(8).toStdString());
+
+	target->set_string(
+		group,
+		"Exec",
+		KShell::joinArgs({ executable }).replace(
+			'\\',
+			qstr("\\\\")).toStdString());
+
+	try {
+		target->save_to_file(targetFile.toStdString());
+	} catch (const std::exception &e) {
+		if (!silent) {
+			LOG(("App Error: %1").arg(QString::fromStdString(e.what())));
+		}
+		return false;
+	}
+
+	QProcess::execute(u"systemctl"_q, {
+		u"--user"_q,
+		u"reload"_q,
+		u"dbus"_q,
+	});
 
 	return true;
 }
@@ -506,6 +384,7 @@ void InstallLauncher() {
 		QStandardPaths::ApplicationsLocation) + '/';
 
 	GenerateDesktopFile(applicationsPath);
+	GenerateServiceFile();
 
 	const auto icons = QStandardPaths::writableLocation(
 		QStandardPaths::GenericDataLocation) + u"/icons/"_q;
@@ -615,6 +494,20 @@ bool SkipTaskbarSupported() {
 	return false;
 }
 
+QString ExecutablePathForShortcuts() {
+	if (Core::UpdaterDisabled()) {
+		const auto &arguments = Core::Launcher::Instance().arguments();
+		if (!arguments.isEmpty()) {
+			const auto result = QFileInfo(arguments.first()).fileName();
+			if (!result.isEmpty()) {
+				return result;
+			}
+		}
+		return cExeName();
+	}
+	return cExeDir() + cExeName();
+}
+
 } // namespace Platform
 
 QString psAppDataPath() {
@@ -676,7 +569,7 @@ void start() {
 
 		if (!Core::UpdaterDisabled()) {
 			QByteArray md5Hash(h);
-			if (!Launcher::Instance().customWorkingDir()) {
+			if (!Core::Launcher::Instance().customWorkingDir()) {
 				const auto exePath = QFile::encodeName(
 					cExeDir() + cExeName());
 
@@ -726,6 +619,8 @@ void start() {
 		h,
 		cGUIDStr(),
 		u"%1"_q).toStdString());
+
+	InstallLauncher();
 }
 
 void finish() {
@@ -796,17 +691,6 @@ QImage DefaultApplicationIcon() {
 namespace ThirdParty {
 
 void start() {
-	LOG(("Icon theme: %1").arg(QIcon::themeName()));
-	LOG(("Fallback icon theme: %1").arg(QIcon::fallbackThemeName()));
-
-	if (!QCoreApplication::eventDispatcher()->inherits(
-		"QEventDispatcherGlib")) {
-		g_warning("Qt is running without GLib event loop integration, "
-			"except various functionality to not to work.");
-	}
-
-	InstallLauncher();
-	LaunchGApplication();
 }
 
 void finish() {
