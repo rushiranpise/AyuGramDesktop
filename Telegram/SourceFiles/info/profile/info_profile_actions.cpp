@@ -110,11 +110,22 @@ namespace {
 		std::shared_ptr<Ui::Show> show,
 		const QString &addToLink) {
 	return [=](QString link) {
-		if (!link.startsWith(u"https://"_q)) {
-			link = peer->session().createInternalLinkFull(peer->userName())
-				+ addToLink;
+		auto settings = &AyuSettings::getInstance();
+		if (!settings->copyUsernameAsLink)
+		{
+			link = '@' + peer->userName();
 		}
-		if (!link.isEmpty()) {
+		else
+		{
+			if (!link.startsWith(u"https://"_q))
+			{
+				link = peer->session().createInternalLinkFull(peer->userName())
+					+ addToLink;
+			}
+		}
+
+		if (!link.isEmpty())
+		{
 			QGuiApplication::clipboard()->setText(link);
 			show->showToast(tr::lng_username_copied(tr::now));
 		}
