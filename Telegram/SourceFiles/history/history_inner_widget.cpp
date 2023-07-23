@@ -393,7 +393,7 @@ bool HistoryInner::BotAbout::refresh() {
 		| MessageFlag::Local;
 	const auto postAuthor = QString();
 	const auto date = TimeId(0);
-	const auto replyTo = MsgId(0);
+	const auto replyTo = FullReplyTo();
 	const auto viaBotId = UserId(0);
 	const auto groupedId = uint64(0);
 	const auto textWithEntities = TextUtilities::ParseEntities(
@@ -1843,12 +1843,11 @@ void HistoryInner::performDrag() {
 }
 
 void HistoryInner::itemRemoved(not_null<const HistoryItem*> item) {
-	if (_history != item->history() && _migrated != item->history()) {
-		return;
-	}
-
 	if (_pinnedItem == item) {
 		_pinnedItem = nullptr;
+	}
+	if (_history != item->history() && _migrated != item->history()) {
+		return;
 	}
 	if (_reactionsItem.current() == item) {
 		_reactionsItem = nullptr;
@@ -2352,7 +2351,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		const auto item = _dragStateItem;
 		const auto itemId = item ? item->fullId() : FullMsgId();
 		if (isUponSelected > 0) {
-			if (!hasCopyRestrictionForSelected()) {
+			if (!hasCopyRestrictionForSelected()
+				&& !getSelectedText().empty()) {
 				_menu->addAction(
 					(isUponSelected > 1
 						? tr::lng_context_copy_selected_items(tr::now)
@@ -2453,7 +2453,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			: QString();
 
 		if (isUponSelected > 0) {
-			if (!hasCopyRestrictionForSelected()) {
+			if (!hasCopyRestrictionForSelected()
+				&& !getSelectedText().empty()) {
 				_menu->addAction(
 					((isUponSelected > 1)
 						? tr::lng_context_copy_selected_items(tr::now)
@@ -2790,7 +2791,7 @@ void HistoryInner::openContextGif(FullMsgId itemId) {
 	if (const auto item = session().data().message(itemId)) {
 		if (const auto media = item->media()) {
 			if (const auto document = media->document()) {
-				_controller->openDocument(document, itemId, MsgId(), true);
+				_controller->openDocument(document, true, { itemId });
 			}
 		}
 	}
@@ -2926,6 +2927,9 @@ void HistoryInner::keyPressEvent(QKeyEvent *e) {
 			&& selectedState.canDeleteCount == selectedState.count) {
 			_widget->confirmDeleteSelected();
 		}
+	} else if (!(e->modifiers() & ~Qt::ShiftModifier)
+		&& e->key() != Qt::Key_Shift) {
+		_widget->tryProcessKeyInput(e);
 	} else {
 		e->ignore();
 	}
@@ -3387,14 +3391,14 @@ void HistoryInner::elementShowPollResults(
 void HistoryInner::elementOpenPhoto(
 		not_null<PhotoData*> photo,
 		FullMsgId context) {
-	_controller->openPhoto(photo, context, MsgId(0));
+	_controller->openPhoto(photo, { context });
 }
 
 void HistoryInner::elementOpenDocument(
 		not_null<DocumentData*> document,
 		FullMsgId context,
 		bool showInMediaView) {
-	_controller->openDocument(document, context, MsgId(0), showInMediaView);
+	_controller->openDocument(document, showInMediaView, { context });
 }
 
 void HistoryInner::elementCancelUpload(const FullMsgId &context) {

@@ -681,7 +681,7 @@ not_null<HistoryItem*> History::addNewLocalMessage(
 		MsgId id,
 		MessageFlags flags,
 		UserId viaBotId,
-		MsgId replyTo,
+		FullReplyTo replyTo,
 		TimeId date,
 		PeerId from,
 		const QString &postAuthor,
@@ -729,7 +729,7 @@ not_null<HistoryItem*> History::addNewLocalMessage(
 		MsgId id,
 		MessageFlags flags,
 		UserId viaBotId,
-		MsgId replyTo,
+		FullReplyTo replyTo,
 		TimeId date,
 		PeerId from,
 		const QString &postAuthor,
@@ -755,7 +755,7 @@ not_null<HistoryItem*> History::addNewLocalMessage(
 		MsgId id,
 		MessageFlags flags,
 		UserId viaBotId,
-		MsgId replyTo,
+		FullReplyTo replyTo,
 		TimeId date,
 		PeerId from,
 		const QString &postAuthor,
@@ -781,7 +781,7 @@ not_null<HistoryItem*> History::addNewLocalMessage(
 		MsgId id,
 		MessageFlags flags,
 		UserId viaBotId,
-		MsgId replyTo,
+		FullReplyTo replyTo,
 		TimeId date,
 		PeerId from,
 		const QString &postAuthor,
@@ -1194,6 +1194,8 @@ void History::applyServiceChanges(
 						topic->setHasPinnedMessages(true);
 					}
 				}
+			}, [&](const MTPDmessageReplyStoryHeader &data) {
+				LOG(("API Error: story reply in messageActionPinMessage."));
 			});
 		}
 	}, [&](const MTPDmessageActionGroupCall &data) {

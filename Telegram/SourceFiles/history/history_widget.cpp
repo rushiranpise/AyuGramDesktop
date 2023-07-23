@@ -232,7 +232,7 @@ HistoryWidget::HistoryWidget(
 , _supportAutocomplete(session().supportMode()
 	? object_ptr<Support::Autocomplete>(this, &session())
 	: nullptr)
-, _send(std::make_shared<Ui::SendButton>(this))
+, _send(std::make_shared<Ui::SendButton>(this, st::historySend))
 , _unblock(this, tr::lng_unblock_button(tr::now).toUpper(), st::historyUnblock)
 , _botStart(this, tr::lng_bot_start(tr::now).toUpper(), st::historyComposeButton)
 , _joinChannel(
@@ -856,7 +856,7 @@ HistoryWidget::HistoryWidget(
 	}) | rpl::start_with_next([=](const Api::SendAction &action) {
 		const auto lastKeyboardUsed = lastForceReplyReplied(FullMsgId(
 			action.history->peer->id,
-			action.replyTo));
+			action.replyTo.msgId));
 		if (action.replaceMediaOf) {
 		} else if (action.options.scheduled) {
 			cancelReply(lastKeyboardUsed);
@@ -946,18 +946,6 @@ void HistoryWidget::refreshTabbedPanel() {
 }
 
 void HistoryWidget::initVoiceRecordBar() {
-	{
-		auto scrollHeight = rpl::combine(
-			_scroll->topValue(),
-			_scroll->heightValue()
-		) | rpl::map([](int top, int height) {
-			return top + height - st::historyRecordLockPosition.y();
-		});
-		_voiceRecordBar->setLockBottom(std::move(scrollHeight));
-	}
-
-	_voiceRecordBar->setSendButtonGeometryValue(_send->geometryValue());
-
 	_voiceRecordBar->setStartRecordingFilter([=] {
 		const auto error = [&]() -> std::optional<QString> {
 			if (_peer) {
@@ -1391,7 +1379,7 @@ AutocompleteQuery HistoryWidget::parseMentionHashtagBotCommandQuery() const {
 	const auto result = (isChoosingTheme()
 		|| (_inlineBot && !_inlineLookingUpBot))
 		? AutocompleteQuery()
-		: ParseMentionHashtagBotCommandQuery(_field);
+		: ParseMentionHashtagBotCommandQuery(_field, {});
 	if (result.query.isEmpty()) {
 		return result;
 	} else if (result.query[0] == '#'
@@ -1482,9 +1470,9 @@ void HistoryWidget::applyInlineBotQuery(UserData *bot, const QString &query) {
 				if (result.open) {
 					const auto request = result.result->openRequest();
 					if (const auto photo = request.photo()) {
-						controller()->openPhoto(photo, {}, {});
+						controller()->openPhoto(photo, {});
 					} else if (const auto document = request.document()) {
-						controller()->openDocument(document, {}, {});
+						controller()->openDocument(document, false, {});
 					}
 				} else {
 					sendInlineResult(result);
@@ -1816,6 +1804,15 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(
 		return true;
 	}
 	return false;
+}
+
+void HistoryWidget::tryProcessKeyInput(not_null<QKeyEvent*> e) {
+	e->accept();
+	keyPressEvent(e);
+	if (!e->isAccepted() && _canSendTexts && _field->isVisible()) {
+		_field->setFocusFast();
+		QCoreApplication::sendEvent(_field->rawTextEdit(), e);
+	}
 }
 
 void HistoryWidget::setupShortcuts() {
@@ -3856,8 +3853,7 @@ void HistoryWidget::hideSelectorControlsAnimated() {
 Api::SendAction HistoryWidget::prepareSendAction(
 		Api::SendOptions options) const {
 	auto result = Api::SendAction(_history, options);
-	result.replyTo = replyToId();
-	result.topicRootId = 0;
+	result.replyTo = { .msgId = replyToId() };
 	result.options.sendAs = _sendAs
 		? _history->session().sendAsPeers().resolveChosen(
 			_history->peer).get()
@@ -3905,7 +3901,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 			? _previewData->id
 			: WebPageId(0));
 
-	auto message = ApiWrap::MessageToSend(prepareSendAction(options));
+	auto message = Api::MessageToSend(prepareSendAction(options));
 	message.textWithTags = _field->getTextWithAppliedMarkdown();
 	message.webPageId = webPageId;
 
@@ -4040,7 +4036,8 @@ void HistoryWidget::reportSelectedMessages() {
 	const auto reason = _chooseForReport->reason;
 	const auto weak = Ui::MakeWeak(_list.data());
 	controller()->window().show(Box([=](not_null<Ui::GenericBox*> box) {
-		Ui::ReportDetailsBox(box, [=](const QString &text) {
+		const auto &st = st::defaultReportBox;
+		Ui::ReportDetailsBox(box, st, [=](const QString &text) {
 			if (weak) {
 				clearSelected();
 				controller()->clearChooseReportMessages();
@@ -4378,7 +4375,7 @@ void HistoryWidget::sendBotCommand(const Bot::SendCommandRequest &request) {
 
 	auto message = Api::MessageToSend(prepareSendAction({}));
 	message.textWithTags = { toSend, TextWithTags::Tags() };
-	message.action.replyTo = request.replyTo
+	message.action.replyTo.msgId = request.replyTo
 		? ((!_peer->isUser()/* && (botStatus == 0 || botStatus == 2)*/)
 			? request.replyTo
 			: replyToId())
@@ -5172,7 +5169,8 @@ bool HistoryWidget::showSendingFilesError(
 		return false;
 	} else if (text == u"(toolarge)"_q) {
 		const auto fileSize = list.files.back().size;
-		controller()->show(Box(FileSizeLimitBox, &session(), fileSize));
+		controller()->show(
+			Box(FileSizeLimitBox, &session(), fileSize, nullptr));
 		return true;
 	}
 	controller()->showToast(text);
