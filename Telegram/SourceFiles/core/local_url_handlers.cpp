@@ -345,7 +345,13 @@ bool ResolveUsernameOrPhone(
 	const auto params = url_parse_params(
 		match->captured(1),
 		qthelp::UrlParamNameTransform::ToLower);
-	const auto domain = params.value(u"domain"_q);
+	const auto domainParam = params.value(u"domain"_q);
+	const auto appnameParam = params.value(u"appname"_q);
+
+	// Fix t.me/s/username links.
+	const auto webChannelPreviewLink = (domainParam == u"s"_q)
+		&& !appnameParam.isEmpty();
+	const auto domain = webChannelPreviewLink ? appnameParam : domainParam;
 	const auto phone = params.value(u"phone"_q);
 	const auto validDomain = [](const QString &domain) {
 		return qthelp::regex_match(
@@ -383,7 +389,9 @@ bool ResolveUsernameOrPhone(
 	if (const auto postId = postParam.toInt()) {
 		post = postId;
 	}
-	const auto appname = params.value(u"appname"_q);
+	const auto storyParam = params.value(u"story"_q);
+	const auto storyId = storyParam.toInt();
+	const auto appname = webChannelPreviewLink ? QString() : appnameParam;
 	const auto appstart = params.value(u"startapp"_q);
 	const auto commentParam = params.value(u"comment"_q);
 	const auto commentId = commentParam.toInt();
@@ -408,6 +416,7 @@ bool ResolveUsernameOrPhone(
 		.usernameOrId = domain,
 		.phone = phone,
 		.messageId = post,
+		.storyId = storyId,
 		.repliesInfo = commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
@@ -421,7 +430,7 @@ bool ResolveUsernameOrPhone(
 		.startToken = startToken,
 		.startAdminRights = adminRights,
 		.startAutoSubmit = myContext.botStartAutoSubmit,
-		.botAppName = appname.isEmpty() ? postParam : appname,
+		.botAppName = (appname.isEmpty() ? postParam : appname),
 		.botAppForceConfirmation = myContext.mayShowConfirmation,
 		.attachBotUsername = params.value(u"attach"_q),
 		.attachBotToggleCommand = (params.contains(u"startattach"_q)
@@ -1027,6 +1036,7 @@ QString TryConvertUrlToLocal(QString url) {
 				"/?$|"
 				"/[a-zA-Z0-9\\.\\_]+/?(\\?|$)|"
 				"/\\d+/?(\\?|$)|"
+				"/s/\\d+/?(\\?|$)|"
 				"/\\d+/\\d+/?(\\?|$)"
 			")"_q, query, matchOptions)) {
 			const auto params = query.mid(usernameMatch->captured(0).size()).toString();
@@ -1036,6 +1046,8 @@ QString TryConvertUrlToLocal(QString url) {
 				added = u"&topic=%1&post=%2"_q.arg(threadPostMatch->captured(1)).arg(threadPostMatch->captured(2));
 			} else if (const auto postMatch = regex_match(u"^/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&post="_q + postMatch->captured(1);
+			} else if (const auto storyMatch = regex_match(u"^/s/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
+				added = u"&story="_q + storyMatch->captured(1);
 			} else if (const auto appNameMatch = regex_match(u"^/([a-zA-Z0-9\\.\\_]+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&appname="_q + appNameMatch->captured(1);
 			}

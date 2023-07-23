@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "platform/platform_integration.h"
 #include "base/platform/base_platform_info.h"
-#include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 #include "core/sandbox.h"
 #include "core/application.h"
@@ -115,8 +114,8 @@ LinuxIntegration::LinuxIntegration()
 	XdpInhibit::InhibitProxy::new_for_bus_sync(
 		Gio::BusType::SESSION_,
 		Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
-		std::string(base::Platform::XDP::kService),
-		std::string(base::Platform::XDP::kObjectPath),
+		base::Platform::XDP::kService,
+		base::Platform::XDP::kObjectPath,
 		nullptr))
 , _darkModeWatcher([](
 	const Glib::ustring &group,
@@ -125,7 +124,7 @@ LinuxIntegration::LinuxIntegration()
 	if (group == "org.freedesktop.appearance"
 		&& key == "color-scheme") {
 		try {
-			const auto ivalue = base::Platform::GlibVariantCast<uint>(value);
+			const auto ivalue = value.get_dynamic<uint>();
 
 			crl::on_main([=] {
 				Core::App().settings().setSystemDarkMode(ivalue == 1);
@@ -209,9 +208,7 @@ void LinuxIntegration::initInhibit() {
 }
 
 void LinuxIntegration::LaunchNativeApplication() {
-	const auto appId = QGuiApplication::desktopFileName()
-		.chopped(8)
-		.toStdString();
+	const auto appId = QGuiApplication::desktopFileName().toStdString();
 
 	const auto app = Glib::wrap(
 		G_APPLICATION(
@@ -225,7 +222,12 @@ void LinuxIntegration::LaunchNativeApplication() {
 				G_APPLICATION_HANDLES_OPEN,
 				nullptr)));
 
-	app->signal_startup().connect([=] {
+	app->signal_startup().connect([weak = std::weak_ptr(app)] {
+		const auto app = weak.lock();
+		if (!app) {
+			return;
+		}
+
 		// GNotification
 		InvokeQueued(qApp, [] {
 			Core::App().notifications().createManager();
@@ -268,8 +270,9 @@ void LinuxIntegration::LaunchNativeApplication() {
 
 	const auto notificationIdVariantType = [] {
 		try {
-			return base::Platform::MakeGlibVariant(
-				NotificationId().toTuple()).get_type();
+			return Glib::create_variant(
+				NotificationId().toTuple()
+			).get_type();
 		} catch (...) {
 			return Glib::VariantType();
 		}
@@ -284,9 +287,9 @@ void LinuxIntegration::LaunchNativeApplication() {
 					const auto &app = Core::App();
 					app.notifications().manager().notificationActivated(
 						NotificationId::FromTuple(
-							base::Platform::GlibVariantCast<
-								NotificationIdTuple
-							>(parameter)));
+							parameter.get_dynamic<NotificationIdTuple>()
+						)
+					);
 				} catch (...) {
 				}
 			});
@@ -301,10 +304,10 @@ void LinuxIntegration::LaunchNativeApplication() {
 					const auto &app = Core::App();
 					app.notifications().manager().notificationReplied(
 						NotificationId::FromTuple(
-							base::Platform::GlibVariantCast<
-								NotificationIdTuple
-							>(parameter)),
-						{});
+							parameter.get_dynamic<NotificationIdTuple>()
+						),
+						{}
+					);
 				} catch (...) {
 				}
 			});
