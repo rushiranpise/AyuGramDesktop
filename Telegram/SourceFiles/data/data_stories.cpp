@@ -1232,10 +1232,22 @@ void Stories::sendIncrementViewsRequests() {
 			}
 			checkQuitPreventFinished();
 		};
-		api->request(MTPstories_IncrementStoryViews(
-			_owner->peer(peer)->asUser()->inputUser,
-			MTP_vector<MTPint>(std::move(ids))
-		)).done(finish).fail(finish).send();
+
+		// AyuGram sendReadStories
+		const auto settings = &AyuSettings::getInstance();
+
+		if (settings->sendReadStories)
+		{
+			api->request(MTPstories_IncrementStoryViews(
+				_owner->peer(peer)->asUser()->inputUser,
+				MTP_vector<MTPint>(std::move(ids))
+			)).done(finish).fail(finish).send();
+		}
+		else
+		{
+			finish();
+		}
+		
 		_incrementViewsPending.remove(peer);
 	}
 }
