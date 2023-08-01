@@ -91,8 +91,6 @@ jobs:
           echo "Configurate git for cherry-picks."
           git config --global user.email "you@example.com"
           git config --global user.name "Sample"
-          curl https://raw.githubusercontent.com/rushiranpise/AyuGramDesktop/p/p.patch | git apply -v
-
       - name: NuGet sources.
         run: |
           nuget sources Disable -Name "Microsoft Visual Studio Offline Packages"
@@ -141,6 +139,8 @@ jobs:
       - name: Telegram Desktop build.
         if: env.ONLY_CACHE == 'false'
         run: |
+          cd %TBUILD%\%REPO_NAME%\ 
+          curl https://raw.githubusercontent.com/rushiranpise/AyuGramDesktop/p/p.patch | git apply -v
           cd %TBUILD%\%REPO_NAME%\Telegram
 
           call configure.bat ^
