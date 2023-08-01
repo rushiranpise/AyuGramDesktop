@@ -177,8 +177,9 @@ void SponsoredMessages::inject(
 }
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
+	// AyuGram disableAds
 	auto settings = &AyuSettings::getInstance();
-	return settings->enableAds && history->peer->isChannel();
+	return !settings->disableAds && history->peer->isChannel();
 }
 
 void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
