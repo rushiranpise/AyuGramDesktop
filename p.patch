@@ -1,0 +1,56 @@
+From 2cbb929e71928f7e2a2e5b6937977c127e619cc6 Mon Sep 17 00:00:00 2001
+From: Rushi Ranpise <37355997+rushiranpise@users.noreply.github.com>
+Date: Thu, 15 Jun 2023 17:03:55 +0000
+Subject: [PATCH] pp
+
+---
+ Telegram/SourceFiles/data/data_peer_values.cpp |  2 +-
+ Telegram/SourceFiles/main/main_session.cpp     | 15 ++++++++-------
+ 2 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/Telegram/SourceFiles/data/data_peer_values.cpp b/Telegram/SourceFiles/data/data_peer_values.cpp
+index 1670afa8f4..2e2fa35e48 100644
+--- a/Telegram/SourceFiles/data/data_peer_values.cpp
++++ b/Telegram/SourceFiles/data/data_peer_values.cpp
+@@ -377,7 +377,7 @@ rpl::producer<bool> PeerPremiumValue(not_null<PeerData*> peer) {
+ }
+ 
+ rpl::producer<bool> AmPremiumValue(not_null<Main::Session*> session) {
+-	return PeerPremiumValue(session->user());
++	return rpl::single(true);
+ }
+ 
+ TimeId SortByOnlineValue(not_null<UserData*> user, TimeId now) {
+diff --git a/Telegram/SourceFiles/main/main_session.cpp b/Telegram/SourceFiles/main/main_session.cpp
+index a235f729f0..51f3ee8ee2 100644
+--- a/Telegram/SourceFiles/main/main_session.cpp
++++ b/Telegram/SourceFiles/main/main_session.cpp
+@@ -237,7 +237,7 @@ rpl::producer<> Session::downloaderTaskFinished() const {
+ }
+ 
+ bool Session::premium() const {
+-	return _user->isPremium();
++	return true;
+ }
+ 
+ bool Session::premiumPossible() const {
+@@ -251,12 +251,13 @@ bool Session::premiumBadgesShown() const {
+ rpl::producer<bool> Session::premiumPossibleValue() const {
+ 	using namespace rpl::mappers;
+ 
+-	auto premium = _user->flagsValue(
+-	) | rpl::filter([=](UserData::Flags::Change change) {
+-		return (change.diff & UserDataFlag::Premium);
+-	}) | rpl::map([=] {
+-		return _user->isPremium();
+-	});
++auto premium = _user->flagsValue(
++	 ) | rpl::filter([=](UserData::Flags::Change change) {
++	 	return (change.diff & UserDataFlag::Premium);
++	 }) | rpl::map([=] {
++	 	return _user->isPremium();
++	 });
++premium = rpl::single(true);
+ 	return rpl::combine(
+ 		std::move(premium),
+ 		_premiumPossible.value(),
