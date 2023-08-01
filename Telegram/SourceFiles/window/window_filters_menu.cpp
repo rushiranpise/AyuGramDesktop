@@ -37,6 +37,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h" // attentionBoxButton
 #include "styles/style_menu_icons.h"
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
+
 namespace Window {
 namespace {
 
@@ -197,6 +201,9 @@ void FiltersMenu::scrollToButton(not_null<Ui::RpWidget*> widget) {
 }
 
 void FiltersMenu::refresh() {
+	// AyuGram hideAllChatsFolder
+	const auto settings = &AyuSettings::getInstance();
+
 	const auto filters = &_session->session().data().chatsFilters();
 	if (!filters->has() || _ignoreRefresh) {
 		return;
@@ -212,7 +219,7 @@ void FiltersMenu::refresh() {
 	const auto maxLimit = (reorderAll ? 1 : 0)
 		+ Data::PremiumLimits(&_session->session()).dialogFiltersCurrent();
 	const auto premiumFrom = (reorderAll ? 0 : 1) + maxLimit;
-	if (!reorderAll) {
+	if (!reorderAll && !settings->hideAllChatsFolder) {
 		_reorder->addPinnedInterval(0, 1);
 	}
 	_reorder->addPinnedInterval(
@@ -542,9 +549,12 @@ void FiltersMenu::applyReorder(
 		return;
 	}
 
+	// AyuGram hideAllChatsFolder
+	const auto settings = &AyuSettings::getInstance();
+
 	const auto filters = &_session->session().data().chatsFilters();
 	const auto &list = filters->list();
-	if (!premium()) {
+	if (!settings->hideAllChatsFolder && !premium()) {
 		if (list[0].id() != FilterId()) {
 			filters->moveAllToFront();
 		}

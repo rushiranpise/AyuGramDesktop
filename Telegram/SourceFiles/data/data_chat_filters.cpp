@@ -25,6 +25,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_app_config.h"
 #include "apiwrap.h"
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
+
 namespace Data {
 namespace {
 
@@ -389,10 +393,16 @@ void ChatFilters::load(bool force) {
 }
 
 void ChatFilters::received(const QVector<MTPDialogFilter> &list) {
+	// AyuGram hideAllChatsFolder
+	const auto settings = &AyuSettings::getInstance();
+
 	auto position = 0;
 	auto changed = false;
 	for (const auto &filter : list) {
 		auto parsed = ChatFilter::FromTL(filter, _owner);
+		if (settings->hideAllChatsFolder && parsed.id() == 0 && list.size() > 1) {
+			continue;
+		}
 		const auto b = begin(_list) + position, e = end(_list);
 		const auto i = ranges::find(b, e, parsed.id(), &ChatFilter::id);
 		if (i == e) {
@@ -413,7 +423,7 @@ void ChatFilters::received(const QVector<MTPDialogFilter> &list) {
 		applyRemove(position);
 		changed = true;
 	}
-	if (!ranges::contains(begin(_list), end(_list), 0, &ChatFilter::id)) {
+	if (!settings->hideAllChatsFolder && !ranges::contains(begin(_list), end(_list), 0, &ChatFilter::id)) {
 		_list.insert(begin(_list), ChatFilter());
 	}
 	if (changed || !_loaded || _reloading) {
@@ -424,9 +434,16 @@ void ChatFilters::received(const QVector<MTPDialogFilter> &list) {
 }
 
 void ChatFilters::apply(const MTPUpdate &update) {
+	// AyuGram hideAllChatsFolder
+	const auto settings = &AyuSettings::getInstance();
+
 	update.match([&](const MTPDupdateDialogFilter &data) {
 		if (const auto filter = data.vfilter()) {
-			set(ChatFilter::FromTL(*filter, _owner));
+			auto parsed = ChatFilter::FromTL(*filter, _owner);
+			if (settings->hideAllChatsFolder && parsed.id() == 0) {
+				return;
+			}
+			set(parsed);
 		} else {
 			remove(data.vid().v);
 		}
