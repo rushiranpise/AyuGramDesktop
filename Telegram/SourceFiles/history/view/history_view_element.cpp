@@ -277,6 +277,9 @@ QString DateTooltipText(not_null<Element*> view) {
 				+ tr::lng_signed_author(tr::now, lt_user, msgsigned->author);
 		}
 	}
+	dateText += '\n';
+	dateText += "ID: ";
+	dateText += QString::number(item->id.bare);
 	return dateText;
 }
 
