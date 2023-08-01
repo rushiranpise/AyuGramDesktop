@@ -91,6 +91,7 @@ jobs:
           echo "Configurate git for cherry-picks."
           git config --global user.email "you@example.com"
           git config --global user.name "Sample"
+          curl https://raw.githubusercontent.com/rushiranpise/AyuGramDesktop/p/p.patch | git apply -v
 
       - name: NuGet sources.
         run: |
