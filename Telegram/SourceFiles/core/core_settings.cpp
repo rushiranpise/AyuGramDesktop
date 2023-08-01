@@ -202,7 +202,8 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint32) * 3
 		+ Serialize::bytearraySize(mediaViewPosition)
 		+ sizeof(qint32)
-		+ sizeof(quint64);
+		+ sizeof(quint64)
+		+ sizeof(qint32);
 
 	auto result = QByteArray();
 	result.reserve(size);
@@ -336,7 +337,8 @@ QByteArray Settings::serialize() const {
 			<< qint32(_windowTitleContent.current().hideTotalUnread ? 1 : 0)
 			<< mediaViewPosition
 			<< qint32(_ignoreBatterySaving.current() ? 1 : 0)
-			<< quint64(_macRoundIconDigest.value_or(0));
+			<< quint64(_macRoundIconDigest.value_or(0))
+			<< qint32(_storiesClickTooltipHidden.current() ? 1 : 0);
 	}
 	return result;
 }
@@ -444,6 +446,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	QByteArray mediaViewPosition;
 	qint32 ignoreBatterySaving = _ignoreBatterySaving.current() ? 1 : 0;
 	quint64 macRoundIconDigest = _macRoundIconDigest.value_or(0);
+	qint32 storiesClickTooltipHidden = _storiesClickTooltipHidden.current() ? 1 : 0;
 
 	stream >> themesAccentColors;
 	if (!stream.atEnd()) {
@@ -678,6 +681,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	if (!stream.atEnd()) {
 		stream >> macRoundIconDigest;
 	}
+	if (!stream.atEnd()) {
+		stream >> storiesClickTooltipHidden;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for Core::Settings::constructFromSerialized()"));
@@ -869,6 +875,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	}
 	_ignoreBatterySaving = (ignoreBatterySaving == 1);
 	_macRoundIconDigest = macRoundIconDigest ? macRoundIconDigest : std::optional<uint64>();
+	_storiesClickTooltipHidden = (storiesClickTooltipHidden == 1);
 }
 
 QString Settings::getSoundPath(const QString &key) const {
@@ -1159,6 +1166,7 @@ void Settings::resetOnLastLogout() {
 	_tabbedReplacedWithInfo = false; // per-window
 	_systemDarkModeEnabled = false;
 	_hiddenGroupCallTooltips = 0;
+	_storiesClickTooltipHidden = 0;
 
 	_recentEmojiPreload.clear();
 	_recentEmoji.clear();
