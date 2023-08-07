@@ -132,7 +132,7 @@ void Stories::apply(const MTPDupdateStory &data) {
 	{
 		return;
 	}
-	
+
 	const auto peerId = peerFromUser(data.vuser_id());
 	const auto user = not_null(_owner->peer(peerId)->asUser());
 	const auto now = base::unixtime::now();
@@ -188,7 +188,7 @@ void Stories::apply(const MTPDupdateReadStories &data) {
 	{
 		return;
 	}
-	
+
 	bumpReadTill(peerFromUser(data.vuser_id()), data.vmax_id().v);
 }
 
@@ -199,7 +199,7 @@ void Stories::apply(not_null<PeerData*> peer, const MTPUserStories *data) {
 	{
 		return;
 	}
-	
+
 	if (!data) {
 		applyDeletedFromSources(peer->id, StorySourcesList::NotHidden);
 		applyDeletedFromSources(peer->id, StorySourcesList::Hidden);
@@ -218,7 +218,7 @@ Story *Stories::applyFromWebpage(PeerId peerId, const MTPstoryItem &story) {
 	{
 		return nullptr;
 	}
-	
+
 	const auto idDates = parseAndApply(
 		_owner->peer(peerId),
 		story,
@@ -1242,13 +1242,13 @@ void Stories::sendIncrementViewsRequests() {
 				_owner->peer(peer)->asUser()->inputUser,
 				MTP_vector<MTPint>(std::move(ids))
 			)).done(finish).fail(finish).send();
+			_incrementViewsPending.remove(peer);
 		}
 		else
 		{
+			_incrementViewsPending.remove(peer);
 			finish();
 		}
-		
-		_incrementViewsPending.remove(peer);
 	}
 }
 
