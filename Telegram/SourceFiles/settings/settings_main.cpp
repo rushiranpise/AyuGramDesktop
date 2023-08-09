@@ -301,7 +301,6 @@ void SetupSections(
 		not_null<Ui::VerticalLayout*> container,
 		Fn<void(Type)> showOther) {
 	AddDivider(container);
-	AddSkip(container);
 
 	const auto addSection = [&](
 			rpl::producer<QString> label,
@@ -319,6 +318,15 @@ void SetupSections(
 			showOther(type);
 		});
 	};
+
+	AddSkip(container);
+	addSection(
+		tr::ayu_AyuPreferences(),
+		Ayu::Id(),
+		{&st::settingsPremiumIconStar, kIconPurple});
+	AddSkip(container);
+	AddDivider(container);
+
 	if (controller->session().supportMode()) {
 		SetupSupport(controller, container);
 
@@ -394,10 +402,6 @@ void SetupSections(
 		tr::lng_settings_section_call_settings(),
 		Calls::Id(),
 		{ &st::settingsIconCalls, kIconGreen });
-    addSection(
-        tr::ayu_AyuPreferences(),
-        Ayu::Id(),
-        { &st::settingsPremiumIconStar, kIconPurple });
 
 	SetupPowerSavingButton(&controller->window(), container);
 	SetupLanguageButton(&controller->window(), container);
