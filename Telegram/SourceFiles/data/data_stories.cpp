@@ -1148,6 +1148,16 @@ void Stories::sendMarkAsReadRequest(
 		StoryId tillId) {
 	Expects(peer->isUser());
 
+	// AyuGram sendReadStories
+	const auto settings = &AyuSettings::getInstance();
+
+	if (!settings->sendReadStories)
+	{
+		_markReadRequests.clear();
+		_markReadPending.clear();
+		return;
+	}
+
 	const auto peerId = peer->id;
 	_markReadRequests.emplace(peerId);
 	const auto finish = [=] {
@@ -1158,22 +1168,11 @@ void Stories::sendMarkAsReadRequest(
 		}
 		checkQuitPreventFinished();
 	};
-
-	// AyuGram sendReadStories
-	const auto settings = &AyuSettings::getInstance();
-
-	if (settings->sendReadStories)
-	{
-		const auto api = &_owner->session().api();
-		api->request(MTPstories_ReadStories(
-			peer->asUser()->inputUser,
-			MTP_int(tillId)
-		)).done(finish).fail(finish).send();
-	}
-	else
-	{
-		finish();
-	}
+	const auto api = &_owner->session().api();
+	api->request(MTPstories_ReadStories(
+		peer->asUser()->inputUser,
+		MTP_int(tillId)
+	)).done(finish).fail(finish).send();
 }
 
 void Stories::checkQuitPreventFinished() {
@@ -1205,6 +1204,16 @@ void Stories::sendIncrementViewsRequests() {
 	if (_incrementViewsPending.empty()) {
 		return;
 	}
+
+	// AyuGram sendReadStories
+	const auto settings = &AyuSettings::getInstance();
+	if (!settings->sendReadStories)
+	{
+		_incrementViewsPending.clear();
+		_incrementViewsRequests.clear();
+		return;
+	}
+
 	auto ids = QVector<MTPint>();
 	struct Prepared {
 		PeerId peer = 0;
@@ -1232,23 +1241,11 @@ void Stories::sendIncrementViewsRequests() {
 			}
 			checkQuitPreventFinished();
 		};
-
-		// AyuGram sendReadStories
-		const auto settings = &AyuSettings::getInstance();
-
-		if (settings->sendReadStories)
-		{
-			api->request(MTPstories_IncrementStoryViews(
-				_owner->peer(peer)->asUser()->inputUser,
-				MTP_vector<MTPint>(std::move(ids))
-			)).done(finish).fail(finish).send();
-			_incrementViewsPending.remove(peer);
-		}
-		else
-		{
-			_incrementViewsPending.remove(peer);
-			finish();
-		}
+		api->request(MTPstories_IncrementStoryViews(
+			_owner->peer(peer)->asUser()->inputUser,
+			MTP_vector<MTPint>(std::move(ids))
+		)).done(finish).fail(finish).send();
+		_incrementViewsPending.remove(peer);
 	}
 }
 
