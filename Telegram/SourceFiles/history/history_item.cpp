@@ -1469,6 +1469,12 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	//	}
 	//}
 
+	const auto updatingSavedLocalEdit = !edition.savePreviousMedia
+		&& (_savedLocalEditMediaData != nullptr);
+	if (!_savedLocalEditMediaData && edition.savePreviousMedia) {
+		savePreviousMedia();
+	}
+
 	if (edition.isEditHide) {
 		_flags |= MessageFlag::HideEdited;
 	} else {
@@ -1488,8 +1494,14 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 		setReplyMarkup(base::take(edition.replyMarkup));
 	}
 	if (!isLocalUpdateMedia()) {
-		removeFromSharedMediaIndex();
-		refreshMedia(edition.mtpMedia);
+		if (updatingSavedLocalEdit) {
+			_savedLocalEditMediaData->media = edition.mtpMedia
+				? CreateMedia(this, *edition.mtpMedia)
+				: nullptr;
+		} else {
+			removeFromSharedMediaIndex();
+			refreshMedia(edition.mtpMedia);
+		}
 	}
 	if (!edition.useSameReactions) {
 		updateReactions(edition.mtpReactions);
@@ -1500,10 +1512,18 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	if (!edition.useSameForwards) {
 		setForwardsCount(edition.forwards);
 	}
-	setText(_media
+	const auto &checkedMedia = updatingSavedLocalEdit
+		? _savedLocalEditMediaData->media
+		: _media;
+	auto updatedText = checkedMedia
 		? edition.textWithEntities
-		: EnsureNonEmpty(edition.textWithEntities));
-	if (!isLocalUpdateMedia()) {
+		: EnsureNonEmpty(edition.textWithEntities);
+	if (updatingSavedLocalEdit) {
+		_savedLocalEditMediaData->text = std::move(updatedText);
+	} else {
+		setText(std::move(updatedText));
+	}
+	if (!isLocalUpdateMedia() && !updatingSavedLocalEdit) {
 		indexAsNewItem();
 	}
 	if (!edition.useSameReplies) {
@@ -1652,6 +1672,9 @@ void HistoryItem::applySentMessage(
 void HistoryItem::updateSentContent(
 		const TextWithEntities &textWithEntities,
 		const MTPMessageMedia *media) {
+	if (_savedLocalEditMediaData) {
+		return;
+	}
 	setText(textWithEntities);
 	if (_flags & MessageFlag::FromInlineBot) {
 		if (!media || !_media || !_media->updateInlineResultMedia(*media)) {

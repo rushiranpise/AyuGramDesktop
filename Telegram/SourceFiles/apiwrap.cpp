@@ -3419,7 +3419,7 @@ void ApiWrap::sendSharedContact(
 void ApiWrap::sendVoiceMessage(
 		QByteArray result,
 		VoiceWaveform waveform,
-		int duration,
+		crl::time duration,
 		const SendAction &action) {
 	const auto caption = TextWithTags();
 	const auto to = fileLoadTaskOptions(action);
