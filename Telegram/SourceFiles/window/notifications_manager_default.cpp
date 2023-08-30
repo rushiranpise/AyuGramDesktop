@@ -43,6 +43,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 
+// AyuGram includes
+#include "ayu/features/streamer_mode/streamer_mode.h"
+
+
 namespace Window {
 namespace Notifications {
 namespace Default {
@@ -699,6 +703,11 @@ Notification::Notification(
 	}, lifetime());
 
 	show();
+
+	if (AyuFeatures::StreamerMode::isEnabled())
+	{
+		AyuFeatures::StreamerMode::hideWidgetWindow(this);
+	}
 }
 
 void Notification::updateReplyGeometry() {
@@ -1239,6 +1248,11 @@ HideAllButton::HideAllButton(
 	}, lifetime());
 
 	show();
+
+	if (AyuFeatures::StreamerMode::isEnabled())
+	{
+		AyuFeatures::StreamerMode::hideWidgetWindow(this);
+	}
 }
 
 void HideAllButton::startHiding() {

@@ -110,6 +110,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <kurlmimedata.h>
 
+// AyuGram includes
+#include "ayu/features/streamer_mode/streamer_mode.h"
+
+
 namespace Media {
 namespace View {
 namespace {
@@ -3250,6 +3254,13 @@ void OverlayWidget::activate() {
 	setFocus();
 	QApplication::setActiveWindow(_window);
 	setFocus();
+
+	if (AyuFeatures::StreamerMode::isEnabled())
+	{
+		AyuFeatures::StreamerMode::hideWidgetWindow(_window);
+	} else {
+		AyuFeatures::StreamerMode::showWidgetWindow(_window);
+	}
 }
 
 void OverlayWidget::show(OpenRequest request) {
