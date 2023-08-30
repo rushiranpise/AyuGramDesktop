@@ -1058,6 +1058,21 @@ void Stories::markAsRead(FullStoryId id, bool viewed) {
 	if (!maybeStory) {
 		return;
 	}
+
+	// AyuGram sendReadStories
+	const auto settings = &AyuSettings::getInstance();
+
+	if (!settings->sendReadStories)
+	{
+		_markReadRequests.clear();
+		_markReadPending.clear();
+
+		_incrementViewsRequests.clear();
+		_incrementViewsPending.clear();
+
+		return;
+	}
+
 	const auto story = *maybeStory;
 	if (story->expired() && story->pinned()) {
 		_incrementViewsPending[id.peer].emplace(id.story);
@@ -1207,6 +1222,10 @@ void Stories::sendMarkAsReadRequest(
 	{
 		_markReadRequests.clear();
 		_markReadPending.clear();
+
+		_incrementViewsRequests.clear();
+		_incrementViewsPending.clear();
+
 		return;
 	}
 
@@ -1588,7 +1607,13 @@ void Stories::report(
 
 bool Stories::isQuitPrevent() {
 	if (!_markReadPending.empty()) {
-		sendMarkAsReadRequests();
+		// AyuGram sendReadStories
+		const auto settings = &AyuSettings::getInstance();
+
+		if (settings->sendReadStories)
+		{
+			sendMarkAsReadRequests();
+		}
 	}
 	if (!_incrementViewsPending.empty()) {
 		sendIncrementViewsRequests();
