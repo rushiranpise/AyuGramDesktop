@@ -52,6 +52,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <kurlmimedata.h>
 
+// AyuGram includes
+#include "ayu/ui/ayu_assets.h"
+
+
 namespace Window {
 namespace {
 
@@ -74,14 +78,12 @@ using Core::WindowPosition;
 
 } // namespace
 
-const QImage &Logo() {
-	static const auto result = QImage(u":/gui/art/logo_256.png"_q);
-	return result;
+QImage Logo() {
+	return currentAppLogo();
 }
 
-const QImage &LogoNoMargin() {
-	static const auto result = QImage(u":/gui/art/logo_256_no_margin.png"_q);
-	return result;
+QImage LogoNoMargin() {
+	return currentAppLogoNoMargin();
 }
 
 void ConvertIconToBlack(QImage &image) {
@@ -136,16 +138,7 @@ void OverrideApplicationIcon(QImage image) {
 }
 
 QIcon CreateOfficialIcon(Main::Session *session) {
-	const auto support = (session && session->supportMode());
-	if (!support) {
-		return QIcon();
-	}
-	auto overriden = OverridenIcon();
-	auto image = overriden.isNull()
-		? Platform::DefaultApplicationIcon()
-		: overriden;
-	ConvertIconToBlack(image);
-	return QIcon(Ui::PixmapFromImage(std::move(image)));
+	return QIcon(Ui::PixmapFromImage(currentAppLogo()));
 }
 
 QIcon CreateIcon(Main::Session *session, bool returnNullIfDefault) {

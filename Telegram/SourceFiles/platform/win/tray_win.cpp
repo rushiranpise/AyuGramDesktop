@@ -24,6 +24,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <private/qguiapplication_p.h>
 #include <private/qhighdpiscaling_p.h>
 
+// AyuGram includes
+#include "ayu/ui/ayu_assets.h"
+
+
 namespace Platform {
 
 namespace {
@@ -37,6 +41,12 @@ constexpr auto kTooltipDelay = crl::time(10000);
 	static constexpr auto kCount = 3;
 	static auto ScaledLogo = std::array<QImage, kCount>();
 	static auto ScaledLogoNoMargin = std::array<QImage, kCount>();
+	static auto lastUsedIcon = currentAppLogoName();
+
+	if (lastUsedIcon != currentAppLogoName()) {
+		ScaledLogo = std::array<QImage, kCount>();
+		ScaledLogoNoMargin = std::array<QImage, kCount>();
+	}
 
 	struct Dimensions {
 		int index = 0;
