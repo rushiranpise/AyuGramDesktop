@@ -2225,13 +2225,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}), isPinned ? &st::menuIconUnpin : &st::menuIconPin);
 		}
 
-        // ayu context menu options
-        auto ayuSubMenu = AyuUi::AyuPopupMenu(this);
-        ayuSubMenu.addHistoryAction(item);
-        ayuSubMenu.addHideMessageAction(item);
-        ayuSubMenu.addReadUntilAction(item);
-
-        _menu->addAction(QString("Ayu"), std::move(ayuSubMenu._ayuSubMenu), &st::ayuMenuIcon, &st::ayuMenuIcon);
+		AyuUi::AddHistoryAction(_menu, item);
+		AyuUi::AddHideMessageAction(_menu, item);
 	};
 	const auto addPhotoActions = [&](not_null<PhotoData*> photo, HistoryItem *item) {
 		const auto media = photo->activeMediaView();
@@ -2327,6 +2322,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				}
 			}, &st::menuIconSelect);
 		}
+
+		AyuUi::AddReadUntilAction(_menu, item);
 	};
 
 	const auto lnkPhoto = link
