@@ -395,6 +395,7 @@ public:
 		MsgId replyToTop,
 		bool isForumPost);
 	void setPostAuthor(const QString &author);
+	void setAyuHint(const QString &hint);
 	void setRealId(MsgId newId);
 	void incrementReplyToTopCounter();
 

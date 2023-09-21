@@ -485,7 +485,7 @@ void History::destroyMessage(not_null<HistoryItem*> item) {
 	{
 		if (!item->isService())
 		{
-			item->setPostAuthor(settings->deletedMark);
+			item->setAyuHint(settings->deletedMark);
 		}
 		else
 		{
