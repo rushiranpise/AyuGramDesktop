@@ -1287,10 +1287,6 @@ void Filler::fillArchiveActions() {
 
 } // namespace
 
-void MarkAsReadChatListHack(not_null<Dialogs::MainList*> list) {
-    MarkAsReadChatList(list);
-}
-
 void PeerMenuExportChat(not_null<PeerData*> peer) {
 	Core::App().exportManager().start(peer);
 }
