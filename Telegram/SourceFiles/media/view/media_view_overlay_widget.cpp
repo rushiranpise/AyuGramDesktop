@@ -3932,10 +3932,12 @@ void OverlayWidget::initThemePreview() {
 			_themePreviewId = 0;
 			_themePreview = std::move(result);
 			if (_themePreview) {
+				using TextTransform = Ui::RoundButton::TextTransform;
 				_themeApply.create(
 					_body,
 					tr::lng_theme_preview_apply(),
 					st::themePreviewApplyButton);
+				_themeApply->setTextTransform(TextTransform::NoTransform);
 				_themeApply->show();
 				_themeApply->setClickedCallback([=] {
 					const auto &object = Background()->themeObject();
@@ -3952,6 +3954,7 @@ void OverlayWidget::initThemePreview() {
 					_body,
 					tr::lng_cancel(),
 					st::themePreviewCancelButton);
+				_themeCancel->setTextTransform(TextTransform::NoTransform);
 				_themeCancel->show();
 				_themeCancel->setClickedCallback([this] { close(); });
 				if (const auto slug = _themeCloudData.slug; !slug.isEmpty()) {
@@ -3959,6 +3962,7 @@ void OverlayWidget::initThemePreview() {
 						_body,
 						tr::lng_theme_share(),
 						st::themePreviewCancelButton);
+					_themeShare->setTextTransform(TextTransform::NoTransform);
 					_themeShare->show();
 					_themeShare->setClickedCallback([=] {
 						QGuiApplication::clipboard()->setText(
@@ -5544,10 +5548,15 @@ bool OverlayWidget::handleDoubleClick(
 		Qt::MouseButton button) {
 	updateOver(position);
 
-	if (_over != Over::Video || !_streamed || button != Qt::LeftButton) {
+	if (_over != Over::Video || button != Qt::LeftButton) {
 		return false;
 	} else if (_stories) {
+		if (ClickHandler::getActive()) {
+			return false;
+		}
 		toggleFullScreen(_windowed);
+	} else if (!_streamed) {
+		return false;
 	} else {
 		playbackToggleFullScreen();
 		playbackPauseResume();
@@ -5692,7 +5701,7 @@ void OverlayWidget::updateOver(QPoint pos) {
 		lnk = _groupThumbs->getState(point);
 		lnkhost = this;
 	} else if (_stories) {
-		lnk = _stories->lookupLocationHandler(pos);
+		lnk = _stories->lookupAreaHandler(pos);
 		lnkhost = this;
 	}
 

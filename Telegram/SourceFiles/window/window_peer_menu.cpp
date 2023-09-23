@@ -12,7 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/compose/compose_show.h"
 #include "chat_helpers/message_field.h"
 #include "ui/wrap/slide_wrap.h"
-#include "ui/widgets/input_fields.h"
+#include "ui/widgets/fields/input_field.h"
 #include "api/api_chat_participants.h"
 #include "lang/lang_keys.h"
 #include "ui/boxes/confirm_box.h"
@@ -66,6 +66,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_memento.h"
 #include "info/info_controller.h"
 #include "info/profile/info_profile_values.h"
+#include "info/stories/info_stories_widget.h"
 #include "data/notify/data_notify_settings.h"
 #include "data/data_changes.h"
 #include "data/data_session.h"
@@ -249,6 +250,7 @@ private:
 	void addToggleMuteSubmenu(bool addSeparator);
 	void addSupportInfo();
 	void addInfo();
+	void addStoryArchive();
 	void addNewWindow();
 	void addToggleFolder();
 	void addToggleUnreadMark();
@@ -546,6 +548,22 @@ void Filler::addInfo() {
 			controller->showPeerInfo(strong);
 		}
 	}, _peer->isUser() ? &st::menuIconProfile : &st::menuIconInfo);
+}
+
+void Filler::addStoryArchive() {
+	const auto channel = _peer ? _peer->asChannel() : nullptr;
+	if (!channel || !channel->canEditStories()) {
+		return;
+	}
+	const auto controller = _controller;
+	const auto weak = base::make_weak(_thread);
+	_addAction(tr::lng_stories_archive_button(tr::now), [=] {
+		if (const auto strong = weak.get()) {
+			controller->showSection(Info::Stories::Make(
+				channel,
+				Info::Stories::Tab::Archive));
+		}
+	}, &st::menuIconStoriesArchiveSection);
 }
 
 void Filler::addToggleFolder() {
@@ -1196,6 +1214,7 @@ void Filler::fillContextMenuActions() {
 void Filler::fillHistoryActions() {
 	addToggleMuteSubmenu(true);
 	addInfo();
+	addStoryArchive();
 	addSupportInfo();
 	addManageChat();
 	addCreatePoll();
@@ -1218,6 +1237,7 @@ void Filler::fillProfileActions() {
 	addGiftPremium();
 	addBotToGroup();
 	addNewMembers();
+	addStoryArchive();
 	addManageChat();
 	addTopicLink();
 	addManageTopic();
@@ -1578,8 +1598,8 @@ void PeerMenuBlockUserBox(
 }
 
 void PeerMenuUnblockUserWithBotRestart(not_null<UserData*> user) {
-	user->session().api().blockedPeers().unblock(user, [=] {
-		if (user->isBot() && !user->isSupport()) {
+	user->session().api().blockedPeers().unblock(user, [=](bool success) {
+		if (success && user->isBot() && !user->isSupport()) {
 			user->session().api().sendBotStart(user);
 		}
 	});
@@ -1924,9 +1944,8 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 
 	const auto field = comment->entity();
 
-	QObject::connect(field, &Ui::InputField::submitted, [=] {
-		submit({});
-	});
+	field->submits(
+	) | rpl::start_with_next([=] { submit({}); }, field->lifetime());
 	InitMessageFieldHandlers(
 		session,
 		show,

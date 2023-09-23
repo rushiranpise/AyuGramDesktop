@@ -83,9 +83,9 @@ for singlePrefix in pathPrefixes:
 
 environment = {
     'MAKE_THREADS_CNT': '-j8',
-    'MACOSX_DEPLOYMENT_TARGET': '10.12',
+    'MACOSX_DEPLOYMENT_TARGET': '10.13',
     'UNGUARDED': '-Werror=unguarded-availability-new',
-    'MIN_VER': '-mmacosx-version-min=10.12',
+    'MIN_VER': '-mmacosx-version-min=10.13',
     'USED_PREFIX': usedPrefix,
     'ROOT_DIR': rootDir,
     'LIBS_DIR': libsDir,
@@ -404,7 +404,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 24d8dc2bde
+    git checkout b1907e1250
 """)
 
 stage('msys64', """
@@ -624,6 +624,7 @@ mac:
 stage('rnnoise', """
     git clone https://github.com/desktop-app/rnnoise.git
     cd rnnoise
+    git checkout fe37e57d09
     mkdir out
     cd out
 win:
@@ -822,7 +823,7 @@ stage('libvpx', """
     git clone https://github.com/webmproject/libvpx.git
 depends:patches/libvpx/*.patch
     cd libvpx
-    git checkout v1.11.0
+    git checkout e1c124f89
 win:
     for /r %%i in (..\\patches\\libvpx\\*) do git apply %%i
 
@@ -882,6 +883,47 @@ depends:yasm/yasm
     lipo -create out.arm64/libvpx.a out.x86_64/libvpx.a -output libvpx.a
 
     make install
+""")
+
+stage('libwebp', """
+    git clone https://github.com/webmproject/libwebp.git
+    cd libwebp
+    git checkout chrome-m116-5845
+win:
+    nmake /f Makefile.vc CFG=debug-static OBJDIR=out RTLIBCFG=static all
+    nmake /f Makefile.vc CFG=release-static OBJDIR=out RTLIBCFG=static all
+    copy out\\release-static\\$X8664\\lib\\libwebp.lib out\\release-static\\$X8664\\lib\\webp.lib
+    copy out\\release-static\\$X8664\\lib\\libwebpdemux.lib out\\release-static\\$X8664\\lib\\webpdemux.lib
+    copy out\\release-static\\$X8664\\lib\\libwebpmux.lib out\\release-static\\$X8664\\lib\\webpmux.lib
+mac:
+    buildOneArch() {
+        arch=$1
+        folder=$2
+
+        CFLAGS=$UNGUARDED cmake -B $folder -G Ninja . \\
+            -D CMAKE_BUILD_TYPE=Release \\
+            -D CMAKE_INSTALL_PREFIX=$USED_PREFIX \\
+            -D CMAKE_OSX_DEPLOYMENT_TARGET:STRING=$MACOSX_DEPLOYMENT_TARGET \\
+            -D CMAKE_OSX_ARCHITECTURES=$arch \\
+            -D WEBP_BUILD_ANIM_UTILS=OFF \\
+            -D WEBP_BUILD_CWEBP=OFF \\
+            -D WEBP_BUILD_DWEBP=OFF \\
+            -D WEBP_BUILD_GIF2WEBP=OFF \\
+            -D WEBP_BUILD_IMG2WEBP=OFF \\
+            -D WEBP_BUILD_VWEBP=OFF \\
+            -D WEBP_BUILD_WEBPMUX=OFF \\
+            -D WEBP_BUILD_WEBPINFO=OFF \\
+            -D WEBP_BUILD_EXTRAS=OFF
+        cmake --build $folder $MAKE_THREADS_CNT
+    }
+    buildOneArch arm64 build.arm64
+    buildOneArch x86_64 build
+
+    lipo -create build.arm64/libsharpyuv.a build/libsharpyuv.a -output build/libsharpyuv.a
+    lipo -create build.arm64/libwebp.a build/libwebp.a -output build/libwebp.a
+    lipo -create build.arm64/libwebpdemux.a build/libwebpdemux.a -output build/libwebpdemux.a
+    lipo -create build.arm64/libwebpmux.a build/libwebpmux.a -output build/libwebpmux.a
+    cmake --install build
 """)
 
 stage('nv-codec-headers', """
@@ -1258,6 +1300,7 @@ win:
     SET OPENSSL_DIR=%LIBS_DIR%\\openssl
     SET OPENSSL_LIBS_DIR=%OPENSSL_DIR%\\out
     SET ZLIB_LIBS_DIR=%LIBS_DIR%\\zlib
+    SET WEBP_DIR=%LIBS_DIR%\\libwebp
     configure -prefix "%LIBS_DIR%\\Qt-5.15.10" ^
         %CONFIGURATIONS% ^
         -force-debug-info ^
@@ -1269,18 +1312,21 @@ win:
         -I "%ANGLE_DIR%\\include" ^
         -D "KHRONOS_STATIC=" ^
         -D "DESKTOP_APP_QT_STATIC_ANGLE=" ^
-        QMAKE_LIBS_OPENGL_ES2_DEBUG="%ANGLE_LIBS_DIR%\\Debug\\tg_angle.lib %ZLIB_LIBS_DIR%\Debug\zlibstaticd.lib d3d9.lib dxgi.lib dxguid.lib" ^
-        QMAKE_LIBS_OPENGL_ES2_RELEASE="%ANGLE_LIBS_DIR%\\Release\\tg_angle.lib %ZLIB_LIBS_DIR%\Release\zlibstatic.lib d3d9.lib dxgi.lib dxguid.lib" ^
+        QMAKE_LIBS_OPENGL_ES2_DEBUG="%ANGLE_LIBS_DIR%\\Debug\\tg_angle.lib %ZLIB_LIBS_DIR%\\Debug\\zlibstaticd.lib d3d9.lib dxgi.lib dxguid.lib" ^
+        QMAKE_LIBS_OPENGL_ES2_RELEASE="%ANGLE_LIBS_DIR%\\Release\\tg_angle.lib %ZLIB_LIBS_DIR%\\Release\\zlibstatic.lib d3d9.lib dxgi.lib dxguid.lib" ^
         -egl ^
-        QMAKE_LIBS_EGL_DEBUG="%ANGLE_LIBS_DIR%\\Debug\\tg_angle.lib %ZLIB_LIBS_DIR%\Debug\zlibstaticd.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
-        QMAKE_LIBS_EGL_RELEASE="%ANGLE_LIBS_DIR%\\Release\\tg_angle.lib %ZLIB_LIBS_DIR%\Release\zlibstatic.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
+        QMAKE_LIBS_EGL_DEBUG="%ANGLE_LIBS_DIR%\\Debug\\tg_angle.lib %ZLIB_LIBS_DIR%\\Debug\\zlibstaticd.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
+        QMAKE_LIBS_EGL_RELEASE="%ANGLE_LIBS_DIR%\\Release\\tg_angle.lib %ZLIB_LIBS_DIR%\\Release\\zlibstatic.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
         -openssl-linked ^
-        -I "%OPENSSL_DIR%\include" ^
-        OPENSSL_LIBS_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libssl.lib %OPENSSL_LIBS_DIR%.dbg\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
-        OPENSSL_LIBS_RELEASE="%OPENSSL_LIBS_DIR%\libssl.lib %OPENSSL_LIBS_DIR%\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
+        -I "%OPENSSL_DIR%\\include" ^
+        OPENSSL_LIBS_DEBUG="%OPENSSL_LIBS_DIR%.dbg\\libssl.lib %OPENSSL_LIBS_DIR%.dbg\\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
+        OPENSSL_LIBS_RELEASE="%OPENSSL_LIBS_DIR%\\libssl.lib %OPENSSL_LIBS_DIR%\\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
         -I "%MOZJPEG_DIR%" ^
-        LIBJPEG_LIBS_DEBUG="%MOZJPEG_DIR%\Debug\jpeg-static.lib" ^
-        LIBJPEG_LIBS_RELEASE="%MOZJPEG_DIR%\Release\jpeg-static.lib" ^
+        LIBJPEG_LIBS_DEBUG="%MOZJPEG_DIR%\\Debug\\jpeg-static.lib" ^
+        LIBJPEG_LIBS_RELEASE="%MOZJPEG_DIR%\\Release\\jpeg-static.lib" ^
+        -system-webp ^
+        -I "%WEBP_DIR%\\src" ^
+        -L "%WEBP_DIR%\\out\\release-static\\$X8664\\lib" ^
         -mp ^
         -no-feature-netlistmgr ^
         -nomake examples ^
@@ -1318,22 +1364,22 @@ mac:
 """)
 
 if buildQt6:
-    stage('qt_6_3_2', """
+    stage('qt_6_2_5', """
 mac:
-    git clone -b v6.3.2 https://code.qt.io/qt/qt5.git qt_6_3_2
-    cd qt_6_3_2
+    git clone -b v6.2.5-lts-lgpl https://code.qt.io/qt/qt5.git qt_6_2_5
+    cd qt_6_2_5
     perl init-repository --module-subset=qtbase,qtimageformats,qtsvg
-depends:patches/qtbase_6.3.2/*.patch
+depends:patches/qtbase_6.2.5/*.patch
     cd qtbase
-
-    find ../../patches/qtbase_6.3.2 -type f -print0 | sort -z | xargs -0 git apply
+    find ../../patches/qtbase_6.2.5 -type f -print0 | sort -z | xargs -0 git apply
     cd ..
+    sed -i.bak 's/tqtc-//' {qtimageformats,qtsvg}/dependencies.yaml
 
     CONFIGURATIONS=-debug
 release:
     CONFIGURATIONS=-debug-and-release
 mac:
-    ./configure -prefix "$USED_PREFIX/Qt-6.3.2" \
+    ./configure -prefix "$USED_PREFIX/Qt-6.2.5" \
         $CONFIGURATIONS \
         -force-debug-info \
         -opensource \
@@ -1342,11 +1388,14 @@ mac:
         -opengl desktop \
         -no-openssl \
         -securetransport \
+        -system-webp \
         -I "$USED_PREFIX/include" \
         -no-feature-futimens \
         -nomake examples \
         -nomake tests \
-        -platform macx-clang -- -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        -platform macx-clang -- \
+        -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+        -DCMAKE_PREFIX_PATH="$USED_PREFIX"
 
     ninja
     ninja install
@@ -1355,7 +1404,7 @@ mac:
 stage('tg_owt', """
     git clone https://github.com/desktop-app/tg_owt.git
     cd tg_owt
-    git checkout dcb5069ff7
+    git checkout 592b14d13b
     git submodule init
     git submodule update
 win:

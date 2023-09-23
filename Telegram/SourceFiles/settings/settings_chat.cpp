@@ -21,7 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/local_storage_box.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/slide_wrap.h"
-#include "ui/widgets/input_fields.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/color_editor.h"
 #include "ui/widgets/buttons.h"
@@ -1016,6 +1016,23 @@ void SetupMessages(
 	AddSkip(inner, st::settingsCheckboxesSkip);
 }
 
+void SetupArchive(
+		not_null<Window::SessionController*> controller,
+		not_null<Ui::VerticalLayout*> container) {
+	AddDivider(container);
+	AddSkip(container);
+
+	PreloadArchiveSettings(&controller->session());
+	AddButton(
+		container,
+		tr::lng_context_archive_settings(),
+		st::settingsButton,
+		{ &st::menuIconArchive }
+	)->addClickHandler([=] {
+		controller->show(Box(Settings::ArchiveSettingsBox, controller));
+	});
+}
+
 void SetupExport(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
@@ -1737,6 +1754,7 @@ void Chat::setupContent(not_null<Window::SessionController*> controller) {
 	SetupChatBackground(controller, content);
 	SetupStickersEmoji(controller, content);
 	SetupMessages(controller, content);
+	SetupArchive(controller, content);
 
 	Ui::ResizeFitChild(this, content);
 }
