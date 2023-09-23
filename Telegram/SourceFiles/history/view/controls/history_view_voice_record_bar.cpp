@@ -42,6 +42,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ui/boxes/voice_confirmation_box.h"
 #include "boxes/abstract_box.h"
 
+
 namespace HistoryView::Controls {
 namespace {
 

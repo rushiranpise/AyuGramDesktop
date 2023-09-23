@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "core/application.h"
 #include "core/core_settings.h"
-#include "lang_auto.h"
 #include "platform/platform_specific.h"
 
 #include <QtWidgets/QApplication>
@@ -18,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/ui/settings/settings_ayu.h"
 #include "ayu/features/streamer_mode/streamer_mode.h"
+#include "lang_auto.h"
 
 
 namespace Core {

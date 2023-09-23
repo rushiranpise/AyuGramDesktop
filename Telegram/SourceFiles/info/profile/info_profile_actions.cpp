@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
 
-#include "ayu/ayu_settings.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
 #include "data/data_folder.h"
@@ -16,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_user.h"
 #include "data/notify/data_notify_settings.h"
-#include "ui/text/text_entity.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
@@ -69,7 +67,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
 #include "ayu/ui/utils/ayu_profile_values.h"
+#include "ui/text/text_entity.h"
+
 
 namespace Info {
 namespace Profile {

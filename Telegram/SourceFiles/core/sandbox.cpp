@@ -35,8 +35,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QScreen>
 #include <QtGui/qpa/qplatformscreen.h>
 
-#include "ayu/database/ayu_database.h"
-
 namespace Core {
 namespace {
 
@@ -122,8 +120,6 @@ int Sandbox::start() {
 			}
 		}
 	}
-
-	AyuDatabase::initialize();
 
 #if defined Q_OS_LINUX && QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 	_localServer.setSocketOptions(QLocalServer::AbstractNamespaceOption);

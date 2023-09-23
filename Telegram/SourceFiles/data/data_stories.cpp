@@ -233,6 +233,7 @@ void Stories::apply(not_null<PeerData*> peer, const MTPPeerStories *data) {
 	{
 		return;
 	}
+
 	if (!data) {
 		applyDeletedFromSources(peer->id, StorySourcesList::NotHidden);
 		applyDeletedFromSources(peer->id, StorySourcesList::Hidden);
