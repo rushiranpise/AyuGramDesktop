@@ -47,7 +47,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [Win32]
+        arch: [Win32,x64]
 
     env:
       UPLOAD_ARTIFACT: "true"
@@ -174,11 +174,23 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    - name: Merge Releases
+    - name: Download Telegram_Win32 Release
       uses: actions/download-artifact@v2
       with:
         name: Telegram_Win32
         path: artifact
+
+    - name: Rename Win32
+      run: mv ./artifact/Ayugram.exe ./artifact/Ayugram_Win32.exe
+    
+    - name: Download x64 Release
+      uses: actions/download-artifact@v2
+      with:
+        name: Telegram_x64
+        path: artifact
+        
+    - name: Rename x64
+      run: mv ./artifact/Ayugram.exe ./artifact/Ayugram_x64.exe        
 
     - name: Upload release
       uses: Hs1r1us/Release-AIO@v1.0
