@@ -3980,6 +3980,7 @@ void ApiWrap::sendMediaWithRandomId(
 		auto current = base::unixtime::now();
 		options.scheduled = current + 12;
 	}
+
 	const auto history = item->history();
 	const auto replyTo = item->replyTo();
 
