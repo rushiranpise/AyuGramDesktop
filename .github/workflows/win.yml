@@ -181,7 +181,7 @@ jobs:
         path: artifact
 
     - name: Rename Win32
-      run: mv artifact/Ayugram.exe artifact/Ayugram_Win32.exe
+      run: ls
     
     - name: Download x64 Release
       uses: actions/download-artifact@v2
