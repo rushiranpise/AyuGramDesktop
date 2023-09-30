@@ -1230,7 +1230,7 @@ void Stories::toggleHidden(
 
 	const auto name = peer->shortName();
 	const auto guard = gsl::finally([&] {
-		if (show) {
+		if (show && !justRemove) {
 			const auto phrase = hidden
 				? tr::lng_stories_hidden_to_contacts
 				: tr::lng_stories_shown_in_chats;
