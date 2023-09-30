@@ -52,6 +52,7 @@ public:
 		// ~ QoL toggles
 		disableAds = true;
 		disableStories = false;
+		disableNotificationsDelay = false;
 		localPremium = false;
 		copyUsernameAsLink = true;
 
@@ -86,11 +87,14 @@ public:
 	bool sendUploadProgress;
 	bool sendOfflinePacketAfterOnline;
 	bool markReadAfterSend;
+	bool markReadAfterReaction;
+	bool markReadAfterPoll;
 	bool useScheduledMessages;
 	bool saveDeletedMessages;
 	bool saveMessagesHistory;
 	bool disableAds;
 	bool disableStories;
+	bool disableNotificationsDelay;
 	bool localPremium;
 	bool copyUsernameAsLink;
 	QString appIcon;
@@ -122,6 +126,10 @@ public:
 
 	void set_markReadAfterSend(bool val);
 
+	void set_markReadAfterReaction(bool val);
+
+	void set_markReadAfterPoll(bool val);
+
 	void set_useScheduledMessages(bool val);
 
 	void set_keepDeletedMessages(bool val);
@@ -131,6 +139,8 @@ public:
 	void set_disableAds(bool val);
 
 	void set_disableStories(bool val);
+
+	void set_disableNotificationsDelay(bool val);
 
 	void set_localPremium(bool val);
 
@@ -171,11 +181,14 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
 	sendUploadProgress,
 	sendOfflinePacketAfterOnline,
 	markReadAfterSend,
+	markReadAfterReaction,
+	markReadAfterPoll,
 	useScheduledMessages,
 	saveDeletedMessages,
 	saveMessagesHistory,
 	disableAds,
 	disableStories,
+	disableNotificationsDelay,
 	localPremium,
 	copyUsernameAsLink,
 	appIcon,

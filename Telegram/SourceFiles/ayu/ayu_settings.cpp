@@ -4,7 +4,6 @@
 // but be respectful and credit the original author.
 //
 // Copyright @Radolyn, 2023
-
 #include "ayu_settings.h"
 
 #include "rpl/lifetime.h"
@@ -211,6 +210,16 @@ void AyuGramSettings::set_markReadAfterSend(bool val)
 	markReadAfterSend = val;
 }
 
+void AyuGramSettings::set_markReadAfterReaction(bool val)
+{
+	markReadAfterReaction = val;
+}
+
+void AyuGramSettings::set_markReadAfterPoll(bool val)
+{
+	markReadAfterPoll = val;
+}
+
 void AyuGramSettings::set_useScheduledMessages(bool val)
 {
 	useScheduledMessages = val;
@@ -234,6 +243,11 @@ void AyuGramSettings::set_disableAds(bool val)
 void AyuGramSettings::set_disableStories(bool val)
 {
 	disableStories = val;
+}
+
+void AyuGramSettings::set_disableNotificationsDelay(bool val)
+{
+	disableNotificationsDelay = val;
 }
 
 void AyuGramSettings::set_localPremium(bool val)

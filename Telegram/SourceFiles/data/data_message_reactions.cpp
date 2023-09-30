@@ -30,6 +30,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "styles/style_chat.h"
 
+// AyuGram includes
+#include "ayu/ayu_state.h"
+
+
 namespace Data {
 namespace {
 
@@ -821,6 +825,13 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
 		_owner->session().api().applyUpdates(result);
+
+		const auto settings = &AyuSettings::getInstance();
+		if (!settings->sendReadMessages && settings->markReadAfterReaction && item)
+		{
+			AyuState::setAllowSendReadPacket(true);
+			item->history()->session().data().histories().readInboxOnNewMessage(item);
+		}
 	}).fail([=](const MTP::Error &error) {
 		_sentRequests.remove(id);
 	}).send();

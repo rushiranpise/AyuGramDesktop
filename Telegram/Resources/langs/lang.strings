@@ -4167,8 +4167,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_MessageSavingSaveForBots" = "Save in bot dialogs";
 "ayu_QoLTogglesHeader" = "Useful features";
 "ayu_KeepAliveService" = "AyuGram Push Service";
-"ayu_DisableStories" = "Disable stories";
 "ayu_DisableAds" = "Disable ads";
+"ayu_DisableStories" = "Disable stories";
+"ayu_DisableNotificationsDelay" = "Disable notify delay";
 "ayu_LocalPremium" = "Local Telegram Premium";
 "ayu_CopyUsernameAsLink" = "Copy username as link";
 "ayu_CustomizationHeader" = "Customization";
@@ -4225,9 +4226,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ClearAyuAttachmentsNotification" = "AyuGram attachments folder cleared";
 "ayu_EraseLocalDatabase" = "Erase Local Database";
 "ayu_ConfirmationsTitle" = "Confirmations";
-"ayu_StickerConfirmation" = "Confirmation when sending stickers";
-"ayu_GIFConfirmation" = "Confirmation when sending GIFs";
-"ayu_VoiceConfirmation" = "Confirmation when sending voice messages";
+"ayu_StickerConfirmation" = "For stickers";
+"ayu_GIFConfirmation" = "For GIFs";
+"ayu_VoiceConfirmation" = "For voice messages";
 "ayu_KillApp" = "Kill App";
 "ayu_LReadMessages" = "Read on Local";
 "ayu_SReadMessages" = "Read on Server";
@@ -4278,6 +4279,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ContextCopyCallbackData" = "Copy Callback Data";
 "ayu_LocalPremiumNotice" = "You're using **local** Telegram Premium.\nIt **won't** give you any benefits, except translator.\n**Enjoy the star near your nickname!**";
 "ayu_SettingsWatermark" = "AyuGram developed and maintained by Radolyn Labs.";
+"ayu_ConfirmationSticker" = "Do you want to send this sticker?";
+"ayu_ConfirmationGIF" = "Do you want to send this GIF?";
+"ayu_ConfirmationVoice" = "Do you want to send this voice message?";
 "ayu_IntroAbout" = "Welcome to the AyuGram Desktop.\nIt's cool and looks less ugly.";
 "ayu_AboutText1" = "Just a cool Telegram client based on {api_link}.";
 "ayu_UpdateAyuGram" = "Update AyuGram";
