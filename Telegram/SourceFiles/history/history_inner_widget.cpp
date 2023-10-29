@@ -13,6 +13,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/admin_log/history_admin_log_item.h"
 #include "history/history_item.h"
 #include "history/history_item_helpers.h"
+#include "history/view/controls/history_view_forward_panel.h"
+#include "history/view/controls/history_view_draft_options.h"
 #include "history/view/media/history_view_media.h"
 #include "history/view/media/history_view_sticker.h"
 #include "history/view/media/history_view_web_page.h"
@@ -45,6 +47,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_controller.h"
 #include "window/window_peer_menu.h"
 #include "window/notifications_manager.h"
+#include "info/info_memento.h"
+#include "info/statistics/info_statistics_widget.h"
 #include "boxes/about_sponsored_box.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/report_messages_box.h"
@@ -93,6 +97,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_premium.h"
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
+
+#include "payments/payments_checkout_process.h"
+#include "payments/payments_form.h"
+#include "base/random.h"
 
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
@@ -286,7 +294,7 @@ public:
 
 		return _widget->elementPathShiftGradient();
 	}
-	void elementReplyTo(const FullMsgId &to) override {
+	void elementReplyTo(const FullReplyTo &to) override {
 		if (_widget) {
 			_widget->elementReplyTo(to);
 		}
@@ -452,6 +460,43 @@ HistoryInner::HistoryInner(
 		_migrated->translateTo(_history->translatedTo());
 	}
 
+#if 0
+	if (const auto channel = _history->peer->asBroadcast()) {
+		if (channel->amCreator()) {
+			const auto weak = base::make_weak(_controller);
+			channel->session().api().request(MTPpayments_GetPremiumGiftCodeOptions(
+				MTP_flags(MTPpayments_GetPremiumGiftCodeOptions::Flag::f_boost_peer),
+				channel->input
+			)).done(crl::guard(weak, [=](const MTPVector<MTPPremiumGiftCodeOption> &result) {
+				if (result.v.isEmpty()) {
+					return;
+				}
+				const auto &data = result.v.front().data();
+				const auto randomId = base::RandomValue<uint64>();
+				Payments::CheckoutProcess::Start(
+					Payments::InvoicePremiumGiftCode{
+						.purpose = Payments::InvoicePremiumGiftCodeGiveaway{
+							.boostPeer = channel,
+							//.additionalChannels = ,
+							.untilDate = (base::unixtime::now() + 300),
+							.onlyNewSubscribers = true,
+						},
+						.randomId = randomId,
+						.currency = qs(data.vcurrency()),
+						.amount = data.vamount().v,
+						.storeProduct = qs(data.vstore_product().value_or_empty()),
+						.storeQuantity = data.vstore_quantity().value_or_empty(),
+						.users = data.vusers().v,
+						.months = data.vmonths().v,
+					},
+					crl::guard(weak, [=](auto) { weak->window().activate(); }));
+			})).fail(crl::guard(weak, [=](const MTP::Error &error) {
+				weak.get()->showToast(error.type());
+			})).send();
+		}
+	}
+#endif
+
 	Window::ChatThemeValueFromPeer(
 		controller,
 		_peer
@@ -505,6 +550,10 @@ HistoryInner::HistoryInner(
 			PremiumPreview::InfiniteReactions);
 	}, lifetime());
 
+	session().data().peerDecorationsUpdated(
+	) | rpl::start_with_next([=] {
+		update();
+	}, lifetime());
 	session().data().itemRemoved(
 	) | rpl::start_with_next(
 		[this](auto item) { itemRemoved(item); },
@@ -2062,6 +2111,20 @@ void HistoryInner::toggleFavoriteReaction(not_null<Element*> view) const {
 	item->toggleReaction(favorite, HistoryItem::ReactionSource::Quick);
 }
 
+TextWithEntities HistoryInner::selectedQuote(
+		not_null<HistoryItem*> item) const {
+	if (_selected.size() != 1
+		|| _selected.begin()->first != item
+		|| _selected.begin()->second == FullSelection) {
+		return {};
+	}
+	const auto view = item->mainView();
+	if (!view) {
+		return {};
+	}
+	return view->selectedQuote(_selected.begin()->second);
+}
+
 void HistoryInner::contextMenuEvent(QContextMenuEvent *e) {
 	showContextMenu(e);
 }
@@ -2158,19 +2221,6 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			return;
 		}
 		const auto itemId = item->fullId();
-		const auto canReply = [&] {
-			const auto peer = item->history()->peer;
-			const auto topic = item->topic();
-			return topic
-				? Data::CanSendAnything(topic)
-				: (Data::CanSendAnything(peer)
-					&& (!peer->isChannel() || peer->asChannel()->amIn()));
-		}();
-		if (canReply) {
-			_menu->addAction(tr::lng_context_reply_msg(tr::now), [=] {
-				_widget->replyToMessage(itemId);
-			}, &st::menuIconReply);
-		}
 		const auto repliesCount = item->repliesCount();
 		const auto withReplies = (repliesCount > 0);
 		const auto topicRootId = item->history()->isForum()
@@ -2217,10 +2267,25 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		if (pinItem->canPin()) {
 			const auto isPinned = pinItem->isPinned();
 			const auto pinItemId = pinItem->fullId();
-			const auto controller = _controller;
 			_menu->addAction(isPinned ? tr::lng_context_unpin_msg(tr::now) : tr::lng_context_pin_msg(tr::now), crl::guard(controller, [=] {
 				Window::ToggleMessagePinned(controller, pinItemId, !isPinned);
 			}), isPinned ? &st::menuIconUnpin : &st::menuIconPin);
+		}
+		if (!item->isService()
+			&& peerIsChannel(itemId.peer)
+			&& !_peer->isMegagroup()) {
+			if (const auto channel = _peer->asChannel()) {
+				if (channel->flags() & ChannelDataFlag::CanGetStatistics) {
+					auto callback = crl::guard(controller, [=] {
+						controller->showSection(
+							Info::Statistics::Make(channel, itemId));
+					});
+					_menu->addAction(
+						tr::lng_stats_title(tr::now),
+						std::move(callback),
+						&st::menuIconStats);
+				}
+			}
 		}
 
 		AyuUi::AddHistoryAction(_menu, item);
@@ -2324,6 +2389,46 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		AyuUi::AddReadUntilAction(_menu, item);
 	};
 
+	const auto addReplyAction = [&](HistoryItem *item) {
+		if (!item || !item->isRegular()) {
+			return;
+		}
+		const auto canSendReply = [&] {
+			const auto peer = item->history()->peer;
+			const auto topic = item->topic();
+			return topic
+				? Data::CanSendAnything(topic)
+				: (Data::CanSendAnything(peer)
+					&& (!peer->isChannel() || peer->asChannel()->amIn()));
+		}();
+		const auto canReply = canSendReply || [&] {
+			const auto peer = item->history()->peer;
+			if (const auto chat = peer->asChat()) {
+				return !chat->isForbidden();
+			} else if (const auto channel = peer->asChannel()) {
+				return !channel->isForbidden();
+			}
+			return true;
+		}();
+		if (canReply) {
+			const auto itemId = item->fullId();
+			const auto quote = selectedQuote(item);
+			auto text = quote.empty()
+				? tr::lng_context_reply_msg(tr::now)
+				: tr::lng_context_quote_and_reply(tr::now);
+			text.replace('&', u"&&"_q);
+			_menu->addAction(text, [=] {
+				if (canSendReply) {
+					_widget->replyToMessage({ itemId, quote });
+				} else {
+					HistoryView::Controls::ShowReplyToChatBox(
+						controller->uiShow(),
+						{ itemId, quote });
+				}
+			}, &st::menuIconReply);
+		}
+	};
+
 	const auto lnkPhoto = link
 		? reinterpret_cast<PhotoData*>(
 			link->property(kPhotoLinkMediaProperty).toULongLong())
@@ -2335,6 +2440,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	if (lnkPhoto || lnkDocument) {
 		const auto item = _dragStateItem;
 		const auto itemId = item ? item->fullId() : FullMsgId();
+		addReplyAction(item);
+
 		if (isUponSelected > 0) {
 			const auto selectedText = getSelectedText();
 			if (!hasCopyRestrictionForSelected()
@@ -2445,6 +2552,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			: QString();
 
 		if (isUponSelected > 0) {
+			addReplyAction(item);
 			const auto selectedText = getSelectedText();
 			if (!hasCopyRestrictionForSelected() && !selectedText.empty()) {
 				_menu->addAction(
@@ -2467,6 +2575,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}
 			addItemActions(item, item);
 		} else {
+			addReplyAction(item);
 			addItemActions(item, albumPartItem);
 			if (item && !isUponSelected) {
 				const auto media = (view ? view->media() : nullptr);
@@ -3433,7 +3542,7 @@ not_null<Ui::PathShiftGradient*> HistoryInner::elementPathShiftGradient() {
 	return _pathGradient.get();
 }
 
-void HistoryInner::elementReplyTo(const FullMsgId &to) {
+void HistoryInner::elementReplyTo(const FullReplyTo &to) {
 	return _widget->replyToMessage(to);
 }
 

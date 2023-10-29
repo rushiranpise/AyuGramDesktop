@@ -434,19 +434,42 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 
 	const auto requestPrivateForwards = [=](
 			const Data::StatisticalGraph &messageGraph) {
-		_api.request(MTPstats_GetBroadcastStats(
-			MTP_flags(MTPstats_GetBroadcastStats::Flags(0)),
-			_channel->inputChannel
-		)).done([=](const MTPstats_BroadcastStats &result) {
-			const auto channelStats = ChannelStatisticsFromTL(result.data());
-			auto info = Data::StatisticsMessageInteractionInfo();
-			for (const auto &r : channelStats.recentMessageInteractions) {
-				if (r.messageId == _fullId.msg) {
-					info = r;
-					break;
-				}
-			}
-			requestFirstPublicForwards(messageGraph, info);
+		_api.request(MTPchannels_GetMessages(
+			_channel->inputChannel,
+			MTP_vector<MTPInputMessage>(
+				1,
+				MTP_inputMessageID(MTP_int(_fullId.msg))))
+		).done([=](const MTPmessages_Messages &result) {
+			const auto process = [&](const MTPVector<MTPMessage> &messages) {
+				const auto &message = messages.v.front();
+				return message.match([&](const MTPDmessage &data) {
+					return Data::StatisticsMessageInteractionInfo{
+						.messageId = IdFromMessage(message),
+						.viewsCount = data.vviews()
+							? data.vviews()->v
+							: 0,
+						.forwardsCount = data.vforwards()
+							? data.vforwards()->v
+							: 0,
+					};
+				}, [](const MTPDmessageEmpty &) {
+					return Data::StatisticsMessageInteractionInfo();
+				}, [](const MTPDmessageService &) {
+					return Data::StatisticsMessageInteractionInfo();
+				});
+			};
+
+			auto info = result.match([&](const MTPDmessages_messages &data) {
+				return process(data.vmessages());
+			}, [&](const MTPDmessages_messagesSlice &data) {
+				return process(data.vmessages());
+			}, [&](const MTPDmessages_channelMessages &data) {
+				return process(data.vmessages());
+			}, [](const MTPDmessages_messagesNotModified &) {
+				return Data::StatisticsMessageInteractionInfo();
+			});
+
+			requestFirstPublicForwards(messageGraph, std::move(info));
 		}).fail([=](const MTP::Error &error) {
 			requestFirstPublicForwards(messageGraph, {});
 		}).send();
@@ -478,9 +501,9 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 			return lifetime;
 		}
 
-		_api.request(MTPstories_GetBoostsStatus(
+		_api.request(MTPpremium_GetBoostsStatus(
 			_peer->input
-		)).done([=](const MTPstories_BoostsStatus &result) {
+		)).done([=](const MTPpremium_BoostsStatus &result) {
 			const auto &data = result.data();
 			const auto hasPremium = !!data.vpremium_audience();
 			const auto premiumMemberCount = hasPremium
@@ -530,28 +553,29 @@ void Boosts::requestBoosts(
 	}
 	constexpr auto kTlFirstSlice = tl::make_int(kFirstSlice);
 	constexpr auto kTlLimit = tl::make_int(kLimit);
-	_requestId = _api.request(MTPstories_GetBoostersList(
+	_requestId = _api.request(MTPpremium_GetBoostsList(
+		MTP_flags(0),
 		_peer->input,
 		MTP_string(token.next),
 		token.next.isEmpty() ? kTlFirstSlice : kTlLimit
-	)).done([=](const MTPstories_BoostersList &result) {
+	)).done([=](const MTPpremium_BoostsList &result) {
 		_requestId = 0;
 
 		const auto &data = result.data();
 		_peer->owner().processUsers(data.vusers());
 
 		auto list = std::vector<Data::Boost>();
-		list.reserve(data.vboosters().v.size());
-		for (const auto &boost : data.vboosters().v) {
+		list.reserve(data.vboosts().v.size());
+		for (const auto &boost : data.vboosts().v) {
 			list.push_back({
-				boost.data().vuser_id().v,
+				boost.data().vuser_id().value_or_empty(),
 				QDateTime::fromSecsSinceEpoch(boost.data().vexpires().v),
 			});
 		}
 		done(Data::BoostsListSlice{
 			.list = std::move(list),
 			.total = data.vcount().v,
-			.allLoaded = (data.vcount().v == data.vboosters().v.size()),
+			.allLoaded = (data.vcount().v == data.vboosts().v.size()),
 			.token = Data::BoostsListSlice::OffsetToken{
 				data.vnext_offset()
 					? qs(*data.vnext_offset())

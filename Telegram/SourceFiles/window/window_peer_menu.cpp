@@ -62,6 +62,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "support/support_helper.h"
 #include "info/info_controller.h"
 #include "info/info_memento.h"
+#include "info/boosts/info_boosts_widget.h"
 #include "info/profile/info_profile_values.h"
 #include "info/statistics/info_statistics_widget.h"
 #include "info/stories/info_stories_widget.h"
@@ -111,7 +112,10 @@ void ShareBotGame(
 	}
 	histories.sendPreparedMessage(
 		history,
-		FullReplyTo{ .msgId = replyTo, .topicRootId = topicRootId },
+		FullReplyTo{
+			.messageId = { replyTo ? history->peer->id : 0, replyTo },
+			.topicRootId = topicRootId,
+		},
 		randomId,
 		Data::Histories::PrepareMessage<MTPmessages_SendMedia>(
 			MTP_flags(flags),
@@ -1006,6 +1010,13 @@ void Filler::addViewStatistics() {
 					controller->showSection(Info::Statistics::Make(peer, {}));
 				}
 			}, &st::menuIconStats);
+			if (!channel->isMegagroup()) {
+				_addAction(tr::lng_boosts_title(tr::now), [=] {
+					if (const auto strong = weak.get()) {
+						controller->showSection(Info::Boosts::Make(peer));
+					}
+				}, &st::menuIconBoosts);
+			}
 		}
 	}
 }
@@ -1028,16 +1039,12 @@ void Filler::addCreatePoll() {
 		? SendMenu::Type::SilentOnly
 		: SendMenu::Type::Scheduled;
 	const auto flag = PollData::Flags();
-	const auto topicRootId = _request.rootId;
-	const auto replyToId = _request.currentReplyToId
-		? _request.currentReplyToId
-		: topicRootId;
+	const auto replyTo = _request.currentReplyTo;
 	auto callback = [=] {
 		PeerMenuCreatePoll(
 			controller,
 			peer,
-			replyToId,
-			topicRootId,
+			replyTo,
 			flag,
 			flag,
 			source,
@@ -1456,8 +1463,7 @@ void PeerMenuShareContactBox(
 void PeerMenuCreatePoll(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
-		MsgId replyToId,
-		MsgId topicRootId,
+		FullReplyTo replyTo,
 		PollData::Flags chosen,
 		PollData::Flags disabled,
 		Api::SendType sendType,
@@ -1482,10 +1488,12 @@ void PeerMenuCreatePoll(
 		auto action = Api::SendAction(
 			peer->owner().history(peer),
 			result.options);
-		action.clearDraft = false;
-		action.replyTo = { .msgId = replyToId, .topicRootId = topicRootId };
+		action.replyTo = replyTo;
+		const auto topicRootId = replyTo.topicRootId;
 		if (const auto local = action.history->localDraft(topicRootId)) {
 			action.clearDraft = local->textWithTags.text.isEmpty();
+		} else {
+			action.clearDraft = false;
 		}
 		const auto api = &peer->session().api();
 		api->polls().create(result.poll, action, crl::guard(weak, [=] {
@@ -1629,7 +1637,7 @@ void BlockSenderFromRepliesBox(
 	PeerMenuBlockUserBox(
 		box,
 		&controller->window(),
-		item->senderOriginal(),
+		item->originalSender(),
 		true,
 		Window::ClearReply{ id });
 }
