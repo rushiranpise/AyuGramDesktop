@@ -27,6 +27,10 @@ class RpWidget;
 class AbstractButton;
 } // namespace Ui
 
+namespace Ui::Text {
+class CustomEmoji;
+} // namespace Ui::Text
+
 namespace Info::Profile {
 
 class EmojiStatusPanel;
@@ -37,6 +41,8 @@ enum class BadgeType {
 	Premium = 0x02,
 	Scam = 0x04,
 	Fake = 0x08,
+	AyuGram = 0x10,
+	Extera = 0x20,
 };
 inline constexpr bool is_flag_type(BadgeType) { return true; }
 
@@ -69,6 +75,8 @@ public:
 		base::flags<BadgeType> allowed
 			= base::flags<BadgeType>::from_raw(-1));
 
+	~Badge();
+
 	[[nodiscard]] Ui::RpWidget *widget() const;
 
 	void setPremiumClickCallback(Fn<void()> callback);
@@ -77,9 +85,9 @@ public:
 
 	[[nodiscard]] Data::CustomEmojiSizeTag sizeTag() const;
 
-private:
 	void setContent(Content content);
 
+private:
 	const not_null<QWidget*> _parent;
 	const style::InfoPeerBadge &_st;
 	const not_null<Main::Session*> _session;

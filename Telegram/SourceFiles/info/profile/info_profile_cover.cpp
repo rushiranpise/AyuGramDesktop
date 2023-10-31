@@ -39,6 +39,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_dialogs.h"
 
+// AyuGram includes
+#include "ayu/utils/telegram_helpers.h"
+
+
 namespace Info::Profile {
 namespace {
 
@@ -302,6 +306,16 @@ Cover::Cover(
 			return controller->isGifPausedAtLeastFor(
 				Window::GifPauseReason::Layer);
 		}))
+, _devBadge(
+		std::make_unique<Badge>(
+			this,
+			st::infoPeerBadge,
+			peer,
+			_emojiStatusPanel.get(),
+			[=] {
+				return controller->isGifPausedAtLeastFor(
+					Window::GifPauseReason::Layer);
+			}))
 , _userpic(topic
 	? nullptr
 	: object_ptr<Ui::UserpicButton>(
@@ -343,6 +357,16 @@ Cover::Cover(
 	_badge->updated() | rpl::start_with_next([=] {
 		refreshNameGeometry(width());
 	}, _name->lifetime());
+
+	if (isAyuGramRelated(getBareID(_peer))) {
+		_devBadge->setContent(Info::Profile::Badge::Content{BadgeType::AyuGram});
+	}
+	else if (isExteraRelated(getBareID(_peer))) {
+		_devBadge->setContent(Info::Profile::Badge::Content{BadgeType::Extera});
+	}
+	else {
+		_devBadge->setContent(Info::Profile::Badge::Content{BadgeType::None});
+	}
 
 	initViewers(std::move(title));
 	setupChildGeometry();
@@ -524,7 +548,7 @@ void Cover::refreshStatusText() {
 				_refreshStatusTimer.callOnce(updateIn);
 			}
 			return showOnline
-				? PlainLink(result)
+				? Ui::Text::Colorized(result)
 				: TextWithEntities{ .text = result };
 		} else if (auto chat = _peer->asChat()) {
 			if (!chat->amIn()) {
@@ -543,7 +567,7 @@ void Cover::refreshStatusText() {
 				onlineCount,
 				channel->isMegagroup());
 			return hasMembersLink
-				? PlainLink(result)
+				? Ui::Text::Link(result)
 				: TextWithEntities{ .text = result };
 		}
 		return tr::lng_chat_status_unaccessible(tr::now, WithEntities);
@@ -571,6 +595,11 @@ void Cover::refreshNameGeometry(int newWidth) {
 	const auto badgeTop = _st.nameTop;
 	const auto badgeBottom = _st.nameTop + _name->height();
 	_badge->move(badgeLeft, badgeTop, badgeBottom);
+
+	const auto devBadgeLeft = badgeLeft + (_badge->widget() ? (_badge->widget()->width() + 2) : 0) + 4;
+	const auto devBadgeTop = _st.nameTop;
+	const auto devBadgeBottom = _st.nameTop + _name->height();
+	_devBadge->move(devBadgeLeft, devBadgeTop, devBadgeBottom);
 }
 
 void Cover::refreshStatusGeometry(int newWidth) {
