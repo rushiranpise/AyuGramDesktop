@@ -1498,14 +1498,14 @@ void VoiceRecordBar::stopRecording(StopType type) {
 		window()->activateWindow();
 		const auto duration = Duration(data.samples);
 
-		auto settings = &AyuSettings::getInstance();
 		if (type == StopType::Send) {
-			if (settings->voiceConfirmation) {
-				auto sendVoiceCallback = [=, this]
-				{
-					_sendVoiceRequests.fire({data.bytes, data.waveform, duration});
-				};
+			auto settings = &AyuSettings::getInstance();
+			auto sendVoiceCallback = crl::guard(this, [=, this]
+			{
+				_sendVoiceRequests.fire({data.bytes, data.waveform, duration});
+			});
 
+			if (settings->voiceConfirmation) {
 				Ui::show(AyuUi::MakeConfirmBox({
 												   .text = tr::ayu_ConfirmationVoice(),
 												   .confirmed = sendVoiceCallback,
@@ -1513,7 +1513,7 @@ void VoiceRecordBar::stopRecording(StopType type) {
 											   }));
 			}
 			else {
-				_sendVoiceRequests.fire({data.bytes, data.waveform, duration});
+				sendVoiceCallback();
 			}
 		} else if (type == StopType::Listen) {
 			_listen = std::make_unique<ListenWrap>(
@@ -1585,18 +1585,17 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 	if (isListenState()) {
 		const auto data = _listen->data();
 		auto settings = &AyuSettings::getInstance();
+		auto sendVoiceCallback = crl::guard(this, [=, this]
+		{
+			_sendVoiceRequests.fire({
+										data->bytes,
+										data->waveform,
+										Duration(data->samples),
+										options
+									});
+		});
 
 		if (settings->voiceConfirmation) {
-			auto sendVoiceCallback = [=, this]
-			{
-				_sendVoiceRequests.fire({
-											data->bytes,
-											data->waveform,
-											Duration(data->samples),
-											options
-										});
-			};
-
 			Ui::show(AyuUi::MakeConfirmBox({
 											   .text = tr::ayu_ConfirmationVoice(),
 											   .confirmed = sendVoiceCallback,
@@ -1604,12 +1603,7 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 										   }));
 		}
 		else {
-			_sendVoiceRequests.fire({
-										data->bytes,
-										data->waveform,
-										Duration(data->samples),
-										options
-									});
+			sendVoiceCallback();
 		}
 	}
 }
