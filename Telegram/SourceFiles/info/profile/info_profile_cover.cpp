@@ -315,7 +315,7 @@ Cover::Cover(
 			[=] {
 				return controller->isGifPausedAtLeastFor(
 					Window::GifPauseReason::Layer);
-			}))
+			}, 0, BadgeType::None | BadgeType::AyuGram | BadgeType::Extera))
 , _userpic(topic
 	? nullptr
 	: object_ptr<Ui::UserpicButton>(
@@ -367,6 +367,10 @@ Cover::Cover(
 	else {
 		_devBadge->setContent(Info::Profile::Badge::Content{BadgeType::None});
 	}
+
+	_devBadge->updated() | rpl::start_with_next([=] {
+		refreshNameGeometry(width());
+	}, _name->lifetime());
 
 	initViewers(std::move(title));
 	setupChildGeometry();
@@ -587,6 +591,9 @@ Cover::~Cover() {
 void Cover::refreshNameGeometry(int newWidth) {
 	auto nameWidth = newWidth - _st.nameLeft - _st.rightSkip;
 	if (const auto widget = _badge->widget()) {
+		nameWidth -= st::infoVerifiedCheckPosition.x() + widget->width();
+	}
+	if (const auto widget = _devBadge->widget()) {
 		nameWidth -= st::infoVerifiedCheckPosition.x() + widget->width();
 	}
 	_name->resizeToNaturalWidth(nameWidth);
