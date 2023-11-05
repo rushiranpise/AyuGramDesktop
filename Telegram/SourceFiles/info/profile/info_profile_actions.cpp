@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
 
+#include "base/options.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
 #include "data/data_folder.h"
@@ -77,6 +78,12 @@ namespace Info {
 namespace Profile {
 namespace {
 
+base::options::toggle ShowPeerIdBelowAbout({
+	.id = kOptionShowPeerIdBelowAbout,
+	.name = "Show Peer IDs in Profile",
+	.description = "Show peer IDs from API below their Bio / Description.",
+});
+
 [[nodiscard]] rpl::producer<TextWithEntities> UsernamesSubtext(
 		not_null<PeerData*> peer,
 		rpl::producer<QString> fallback) {
@@ -146,6 +153,27 @@ namespace {
 		st::infoProfileSkip);
 	result->setDuration(st::infoSlideDuration);
 	return result;
+}
+
+[[nodiscard]] rpl::producer<TextWithEntities> AboutWithIdValue(
+		not_null<PeerData*> peer) {
+
+	return AboutValue(
+		peer
+	) | rpl::map([=](TextWithEntities &&value) {
+		if (!ShowPeerIdBelowAbout.value()) {
+			return std::move(value);
+		}
+		using namespace Ui::Text;
+		if (!value.empty()) {
+			value.append("\n");
+		}
+		value.append(Italic(u"id: "_q));
+		const auto raw = peer->id.value & PeerId::kChatTypeMask;
+		const auto id = QString::number(raw);
+		value.append(Link(Italic(id), "internal:copy:" + id));
+		return std::move(value);
+	});
 }
 
 template <typename Text, typename ToggleOn, typename Callback>
@@ -425,8 +453,8 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			? tr::lng_info_about_label()
 			: tr::lng_info_bio_label();
 		addTranslateToMenu(
-			addInfoLine(std::move(label), AboutValue(user)).text,
-			AboutValue(user));
+			addInfoLine(std::move(label), AboutWithIdValue(user)).text,
+			AboutWithIdValue(user));
 
 		const auto usernameLine = addInfoOneLine(
 			UsernamesSubtext(_peer, tr::lng_info_username_label()),
@@ -576,11 +604,11 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			).text->setLinksTrusted();
 		}
 
-		const auto about = addInfoLine(
-			tr::lng_info_about_label(),
-			_topic ? rpl::single(TextWithEntities()) : AboutValue(_peer));
+		const auto about = addInfoLine(tr::lng_info_about_label(), _topic
+			? rpl::single(TextWithEntities())
+			: AboutWithIdValue(_peer));
 		if (!_topic) {
-			addTranslateToMenu(about.text, AboutValue(_peer));
+			addTranslateToMenu(about.text, AboutWithIdValue(_peer));
 		}
 
 		if (settings->showPeerId != 0 && !_topic)
@@ -1128,6 +1156,8 @@ object_ptr<Ui::RpWidget> ActionsFiller::fill() {
 }
 
 } // namespace
+
+const char kOptionShowPeerIdBelowAbout[] = "show-peer-id-below-about";
 
 object_ptr<Ui::RpWidget> SetupDetails(
 		not_null<Controller*> controller,
