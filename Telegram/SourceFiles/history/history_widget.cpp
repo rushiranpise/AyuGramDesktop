@@ -5391,8 +5391,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}));
 
 	Window::ActivateWindow(controller());
-	const auto shown = controller()->show(std::move(box));
-	shown->setCloseByOutsideClick(false);
+	controller()->show(std::move(box));
 
 	return true;
 }
@@ -7972,7 +7971,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 					.now = now,
 					.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
 					.pausedSpoiler = pausedSpoiler,
-					.elisionOneLine = true,
+					.elisionLines = 1,
 				});
 			} else {
 				p.setFont(st::msgDateFont);

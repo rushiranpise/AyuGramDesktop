@@ -472,7 +472,7 @@ HistoryItem::HistoryItem(
 	config.reply.topicPost = (topicRootId != 0);
 	if (const auto originalReply = original->Get<HistoryMessageReply>()) {
 		if (originalReply->external()) {
-			config.reply = originalReply->fields();
+			config.reply = originalReply->fields().clone(this);
 			if (!config.reply.externalPeerId) {
 				config.reply.messageId = 0;
 			}
@@ -744,7 +744,7 @@ HistoryItem::HistoryItem(
 HistoryItem::~HistoryItem() {
 	_media = nullptr;
 	clearSavedMedia();
-	if (auto reply = Get<HistoryMessageReply>()) {
+	if (const auto reply = Get<HistoryMessageReply>()) {
 		reply->clearData(this);
 	}
 	clearDependencyMessage();
@@ -1695,7 +1695,6 @@ void HistoryItem::applySentMessage(const MTPDmessage &data) {
 	setForwardsCount(data.vforwards().value_or(-1));
 	if (const auto reply = data.vreply_to()) {
 		reply->match([&](const MTPDmessageReplyHeader &data) {
-			// #TODO replies
 			const auto replyToPeer = data.vreply_to_peer_id()
 				? peerFromMTP(*data.vreply_to_peer_id())
 				: PeerId();
@@ -2001,9 +2000,6 @@ void HistoryItem::setRealId(MsgId newId) {
 	_history->owner().requestItemResize(this);
 
 	if (const auto reply = Get<HistoryMessageReply>()) {
-		if (reply->link()) {
-			reply->setLinkFrom(this);
-		}
 		incrementReplyToTopCounter();
 	}
 }
@@ -3189,7 +3185,7 @@ void HistoryItem::createComponents(CreateConfig &&config) {
 	UpdateComponents(mask);
 
 	if (const auto reply = Get<HistoryMessageReply>()) {
-		reply->set(config.reply);
+		reply->set(std::move(config.reply));
 		if (!reply->updateData(this)) {
 			if (const auto messageId = reply->messageId()) {
 				RequestDependentMessageItem(
@@ -3405,13 +3401,15 @@ void HistoryItem::createComponentsHelper(
 			: (replyTo.messageId.peer == history()->peer->id)
 			? replyTo.messageId.msg
 			: MsgId();
+		const auto forum = _history->asForum();
+		const auto topic = forum
+			? forum->topicFor(replyTo.topicRootId)
+			: nullptr;
 		if (!config.reply.externalPeerId
-			&& to
-			&& config.reply.topicPost
-			&& replyTo.topicRootId != to->topicRootId()) {
+			&& topic
+			&& topic->rootId() != to->topicRootId()) {
 			config.reply.externalPeerId = replyTo.messageId.peer;
 		}
-		const auto forum = _history->asForum();
 		config.reply.topicPost = config.reply.externalPeerId
 			? (replyTo.topicRootId
 				&& (replyTo.topicRootId != Data::ForumTopic::kGeneralId))
@@ -3512,7 +3510,7 @@ void HistoryItem::createComponents(const MTPDmessage &data) {
 		});
 	}
 	if (const auto reply = data.vreply_to()) {
-		config.reply = ReplyFieldsFromMTP(history(), *reply);
+		config.reply = ReplyFieldsFromMTP(this, *reply);
 	}
 	config.viaBotId = data.vvia_bot_id().value_or_empty();
 	config.viewsCount = data.vviews().value_or(-1);
