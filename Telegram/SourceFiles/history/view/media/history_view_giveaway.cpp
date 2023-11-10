@@ -372,7 +372,7 @@ void Giveaway::paintChannels(
 				geometry.x(),
 				geometry.y(),
 				width(),
-				&cache->bg);
+				&cache->bg2);
 			if (channel.ripple->empty()) {
 				channel.ripple = nullptr;
 			}
