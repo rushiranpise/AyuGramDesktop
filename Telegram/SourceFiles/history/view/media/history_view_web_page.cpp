@@ -155,7 +155,7 @@ bool WebPage::HasButton(not_null<WebPageData*> webpage) {
 }
 
 QSize WebPage::countOptimalSize() {
-	if (_data->pendingTill) {
+	if (_data->pendingTill || _data->failed) {
 		return { 0, 0 };
 	}
 
@@ -366,7 +366,7 @@ QSize WebPage::countOptimalSize() {
 }
 
 QSize WebPage::countCurrentSize(int newWidth) {
-	if (_data->pendingTill) {
+	if (_data->pendingTill || _data->failed) {
 		return { newWidth, minHeight() };
 	}
 
@@ -530,7 +530,7 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 	Ui::Text::FillQuotePaint(p, outer, *cache, _st);
 
 	if (_ripple) {
-		_ripple->paint(p, outer.x(), outer.y(), width(), &cache->bg);
+		_ripple->paint(p, outer.x(), outer.y(), width(), &cache->bg2);
 		if (_ripple->empty()) {
 			_ripple = nullptr;
 		}
@@ -710,7 +710,6 @@ TextState WebPage::textState(QPoint point, StateRequest request) const {
 	auto inner = outer.marginsRemoved(innerMargin());
 	auto tshift = inner.top();
 	auto paintw = inner.width();
-	auto attachAdditionalInfoText = _attach ? _attach->additionalInfoString() : QString();
 
 	auto lineHeight = UnitedLineHeight();
 	auto inThumb = false;
@@ -784,7 +783,11 @@ TextState WebPage::textState(QPoint point, StateRequest request) const {
 			auto attachTop = tshift - bubble.top();
 			if (rtl()) attachLeft = width() - attachLeft - _attach->width();
 			result = _attach->textState(point - QPoint(attachLeft, attachTop), request);
-			result.link = replaceAttachLink(result.link);
+			if (result.cursor == CursorState::Enlarge) {
+				result.cursor = CursorState::None;
+			} else {
+				result.link = replaceAttachLink(result.link);
+			}
 		}
 	}
 	if (!result.link && outer.contains(point)) {
@@ -891,6 +894,7 @@ void WebPage::playAnimation(bool autoplay) {
 bool WebPage::isDisplayed() const {
 	const auto item = _parent->data();
 	return !_data->pendingTill
+		&& !_data->failed
 		&& !item->Has<HistoryMessageLogEntryOriginal>();
 }
 
@@ -901,6 +905,11 @@ QString WebPage::additionalInfoString() const {
 bool WebPage::toggleSelectionByHandlerClick(
 		const ClickHandlerPtr &p) const {
 	return _attach && _attach->toggleSelectionByHandlerClick(p);
+}
+
+bool WebPage::allowTextSelectionByHandler(
+		const ClickHandlerPtr &p) const {
+	return (p == _openl);
 }
 
 bool WebPage::dragItemByHandler(const ClickHandlerPtr &p) const {

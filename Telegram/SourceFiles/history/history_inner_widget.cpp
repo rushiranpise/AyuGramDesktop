@@ -207,10 +207,6 @@ public:
 			not_null<const Element*> view) override {
 		return (Element::Moused() == view);
 	}
-	[[nodiscard]] float64 elementHighlightOpacity(
-			not_null<const HistoryItem*> item) const override {
-		return _widget ? _widget->elementHighlightOpacity(item) : 0.;
-	}
 	bool elementInSelectionMode() override {
 		return _widget ? _widget->inSelectionMode() : false;
 	}
@@ -269,7 +265,11 @@ public:
 		return _widget ? _widget->elementAnimationsPaused() : false;
 	}
 	bool elementHideReply(not_null<const Element*> view) override {
-		return view->isTopicRootReply();
+		if (!view->isTopicRootReply()) {
+			return false;
+		}
+		const auto reply = view->data()->Get<HistoryMessageReply>();
+		return reply && !reply->fields().manualQuote;
 	}
 	bool elementShownUnread(not_null<const Element*> view) override {
 		return view->data()->unread(view->data()->history());
@@ -1065,6 +1065,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 	auto clip = e->rect();
 
 	auto context = preparePaintContext(clip);
+	context.highlightPathCache = &_highlightPathCache;
 	_pathGradient->startFrame(
 		0,
 		width(),
@@ -1148,7 +1149,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			} else if (item->isUnreadMention()
 				&& !item->isUnreadMedia()) {
 				readContents.insert(item);
-				_widget->enqueueMessageHighlight(view);
+				_widget->enqueueMessageHighlight(view, {});
 			}
 		}
 		session().data().reactions().poll(item, context.now);
@@ -1190,6 +1191,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				view,
 				selfromy - mtop,
 				seltoy - mtop);
+			context.highlight = _widget->itemHighlight(view->data());
 			view->draw(p, context);
 			processPainted(view, top, height);
 
@@ -1224,9 +1226,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		const auto &sendingAnimation = _controller->sendingAnimation();
 		while (top < drawToY) {
 			const auto height = view->height();
+			const auto item = view->data();
 			if ((context.clip.y() < height)
 				&& (hdrawtop < top + height)
-				&& !sendingAnimation.hasAnimatedMessage(view->data())) {
+				&& !sendingAnimation.hasAnimatedMessage(item)) {
 				context.reactionInfo
 					= _reactionsManager->currentReactionPaintInfo();
 				context.outbg = view->hasOutLayout();
@@ -1234,6 +1237,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 					view,
 					selfromy - htop,
 					seltoy - htop);
+				context.highlight = _widget->itemHighlight(item);
 				view->draw(p, context);
 				processPainted(view, top, height);
 			}
@@ -1678,7 +1682,10 @@ void HistoryInner::mouseActionStart(const QPoint &screenPos, Qt::MouseButton but
 		Ui::MarkInactivePress(_controller->widget(), false);
 	}
 
-	if (ClickHandler::getPressed()) {
+	const auto pressed = ClickHandler::getPressed();
+	if (pressed
+		&& (!Element::Hovered()
+			|| !Element::Hovered()->allowTextSelectionByHandler(pressed))) {
 		_mouseAction = MouseAction::PrepareDrag;
 	} else if (inSelectionMode()) {
 		if (_dragStateItem
@@ -1854,9 +1861,12 @@ std::unique_ptr<QMimeData> HistoryInner::prepareDrag() {
 		session().data().setMimeForwardIds(std::move(forwardIds));
 		auto result = std::make_unique<QMimeData>();
 		result->setData(u"application/x-td-forward"_q, "1");
-		if (const auto media = pressedView->media()) {
-			if (const auto document = media->getDocument()) {
-				const auto filepath = document->filepath(true);
+		if (pressedHandler) {
+			const auto lnkDocument = reinterpret_cast<DocumentData*>(
+				pressedHandler->property(
+					kDocumentLinkMediaProperty).toULongLong());
+			if (lnkDocument) {
+				const auto filepath = lnkDocument->filepath(true);
 				if (!filepath.isEmpty()) {
 					QList<QUrl> urls;
 					urls.push_back(QUrl::fromLocalFile(filepath));
@@ -2111,7 +2121,7 @@ void HistoryInner::toggleFavoriteReaction(not_null<Element*> view) const {
 	item->toggleReaction(favorite, HistoryItem::ReactionSource::Quick);
 }
 
-TextWithEntities HistoryInner::selectedQuote(
+HistoryView::SelectedQuote HistoryInner::selectedQuote(
 		not_null<HistoryItem*> item) const {
 	if (_selected.size() != 1
 		|| _selected.begin()->first != item
@@ -2401,25 +2411,22 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				: (Data::CanSendAnything(peer)
 					&& (!peer->isChannel() || peer->asChannel()->amIn()));
 		}();
-		const auto canReply = canSendReply || [&] {
-			const auto peer = item->history()->peer;
-			if (const auto chat = peer->asChat()) {
-				return !chat->isForbidden();
-			} else if (const auto channel = peer->asChannel()) {
-				return !channel->isForbidden();
-			}
-			return true;
-		}();
+		const auto canReply = canSendReply || item->allowsForward();
 		if (canReply) {
-			const auto itemId = item->fullId();
-			const auto quote = selectedQuote(item);
-			auto text = quote.empty()
-				? tr::lng_context_reply_msg(tr::now)
-				: tr::lng_context_quote_and_reply(tr::now);
+			const auto selected = selectedQuote(item);
+			auto text = selected
+				? tr::lng_context_quote_and_reply(tr::now)
+				: tr::lng_context_reply_msg(tr::now);
+			const auto replyToItem = selected.item ? selected.item : item;
+			const auto itemId = replyToItem->fullId();
+			const auto quote = selected.text;
 			text.replace('&', u"&&"_q);
 			_menu->addAction(text, [=] {
 				if (canSendReply) {
 					_widget->replyToMessage({ itemId, quote });
+					if (!quote.empty()) {
+						_widget->clearSelected();
+					}
 				} else {
 					HistoryView::Controls::ShowReplyToChatBox(
 						controller->uiShow(),
@@ -3094,6 +3101,8 @@ void HistoryInner::recountHistoryGeometry() {
 		accumulate_max(oldHistoryPaddingTop, _botAbout->height);
 	}
 
+	updateBotInfo(false);
+
 	_history->resizeToWidth(_contentWidth);
 	if (_migrated) {
 		_migrated->resizeToWidth(_contentWidth);
@@ -3117,7 +3126,6 @@ void HistoryInner::recountHistoryGeometry() {
 		}
 	}
 
-	updateBotInfo(false);
 	if (const auto view = _botAbout ? _botAbout->view() : nullptr) {
 		_botAbout->height = view->resizeGetHeight(_contentWidth);
 		_botAbout->top = qMin(
@@ -3482,11 +3490,6 @@ bool HistoryInner::elementIntersectsRange(
 void HistoryInner::elementStartStickerLoop(
 		not_null<const Element*> view) {
 	_animatedStickersPlayed.emplace(view->data());
-}
-
-float64 HistoryInner::elementHighlightOpacity(
-		not_null<const HistoryItem*> item) const {
-	return _widget->highlightOpacity(item);
 }
 
 void HistoryInner::elementShowPollResults(
@@ -3854,6 +3857,10 @@ void HistoryInner::mouseActionUpdate() {
 					if (const auto view = viewByItem(_mouseActionItem)) {
 						selState = view->adjustSelection(selState, _mouseSelectType);
 					}
+				}
+				if (!selState.empty()) {
+					// We started selecting text in web page preview.
+					ClickHandler::unpressed();
 				}
 				if (_selected[_mouseActionItem] != selState) {
 					_selected[_mouseActionItem] = selState;

@@ -95,14 +95,9 @@ public:
 		QPoint point,
 		InfoDisplayType type) const override;
 	TextForMimeData selectedText(TextSelection selection) const override;
-	TextWithEntities selectedQuote(TextSelection selection) const override;
-	TextWithEntities selectedQuote(
-		const Ui::Text::String &text,
-		TextSelection selection) const override;
+	SelectedQuote selectedQuote(TextSelection selection) const override;
 	TextSelection selectionFromQuote(
-		const TextWithEntities &quote) const override;
-	TextSelection selectionFromQuote(
-		const Ui::Text::String &text,
+		not_null<HistoryItem*> item,
 		const TextWithEntities &quote) const override;
 	TextSelection adjustSelection(
 		TextSelection selection,
@@ -142,8 +137,9 @@ public:
 	[[nodiscard]] ClickHandlerPtr rightActionLink(
 		std::optional<QPoint> pressPoint) const override;
 	[[nodiscard]] TimeId displayedEditDate() const override;
-	[[nodiscard]] HistoryMessageReply *displayedReply() const override;
 	[[nodiscard]] bool toggleSelectionByHandlerClick(
+		const ClickHandlerPtr &handler) const override;
+	[[nodiscard]] bool allowTextSelectionByHandler(
 		const ClickHandlerPtr &handler) const override;
 	[[nodiscard]] int infoWidth() const override;
 	[[nodiscard]] int bottomInfoFirstLineWidth() const override;
@@ -311,8 +307,9 @@ private:
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	Ui::Text::String _rightBadge;
 	mutable int _fromNameVersion = 0;
-	uint32 _bubbleWidthLimit : 31 = 0;
+	uint32 _bubbleWidthLimit : 30 = 0;
 	uint32 _invertMedia : 1 = 0;
+	uint32 _hideReply : 1 = 0;
 
 	BottomInfo _bottomInfo;
 

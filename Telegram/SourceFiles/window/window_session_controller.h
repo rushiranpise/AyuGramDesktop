@@ -68,6 +68,7 @@ struct ChatPaintContext;
 struct ChatThemeBackground;
 struct ChatThemeBackgroundData;
 class MessageSendingAnimationController;
+struct BoostCounters;
 } // namespace Ui
 
 namespace Data {
@@ -166,6 +167,7 @@ struct SectionShow {
 		return copy;
 	}
 
+	TextWithEntities highlightPart;
 	Way way = Way::Forward;
 	anim::type animated = anim::type::normal;
 	anim::activation activation = anim::activation::normal;
@@ -313,14 +315,13 @@ private:
 		const PeerByLinkInfo &info);
 
 	void resolveBoostState(not_null<ChannelData*> channel);
-	void applyBoost(not_null<ChannelData*> channel, Fn<void(bool)> done);
-	void replaceBoostConfirm(
-		not_null<PeerData*> from,
+	void applyBoost(
 		not_null<ChannelData*> channel,
-		Fn<void(bool)> done);
-	void applyBoostChecked(
+		Fn<void(Ui::BoostCounters)> done);
+	void applyBoostsChecked(
 		not_null<ChannelData*> channel,
-		Fn<void(bool)> done);
+		std::vector<int> slots,
+		Fn<void(Ui::BoostCounters)> done);
 
 	const not_null<Main::Session*> _session;
 

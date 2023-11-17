@@ -9,6 +9,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_statistics.h"
 #include "apiwrap.h"
+#include "base/call_delayed.h"
+#include "base/event_filter.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
 #include "history/history_item.h"
@@ -28,9 +30,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rect.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/slide_wrap.h"
 #include "styles/style_boxes.h"
+#include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_statistics.h"
 
@@ -42,6 +46,39 @@ struct Descriptor final {
 	not_null<Api::Statistics*> api;
 	not_null<QWidget*> toastParent;
 };
+
+void AddContextMenu(
+		not_null<Ui::RpWidget*> button,
+		not_null<Controller*> controller,
+		not_null<HistoryItem*> item) {
+	const auto fullId = item->fullId();
+	const auto contextMenu = button->lifetime()
+		.make_state<base::unique_qptr<Ui::PopupMenu>>();
+	const auto showMenu = [=] {
+		*contextMenu = base::make_unique_q<Ui::PopupMenu>(
+			button,
+			st::popupMenuWithIcons);
+		const auto go = [=] {
+			const auto &session = controller->parentController();
+			if (const auto item = session->session().data().message(fullId)) {
+				session->showMessage(item);
+			}
+		};
+		contextMenu->get()->addAction(
+			tr::lng_context_to_msg(tr::now),
+			crl::guard(controller, go),
+			&st::menuIconShowInChat);
+		contextMenu->get()->popup(QCursor::pos());
+	};
+
+	base::install_event_filter(button, [=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::ContextMenu) {
+			showMenu();
+			return base::EventFilterResult::Cancel;
+		}
+		return base::EventFilterResult::Continue;
+	});
+}
 
 void ProcessZoom(
 		const Descriptor &d,
@@ -209,50 +246,6 @@ void FillStatistic(
 			tr::lng_chart_title_message_interaction(),
 			Type::DoubleLinear);
 	}
-}
-
-void FillLoading(
-		not_null<Ui::VerticalLayout*> container,
-		rpl::producer<bool> toggleOn,
-		rpl::producer<> showFinished) {
-	const auto emptyWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	emptyWrap->toggleOn(std::move(toggleOn), anim::type::instant);
-
-	const auto content = emptyWrap->entity();
-	auto icon = ::Settings::CreateLottieIcon(
-		content,
-		{ .name = u"stats"_q, .sizeOverride = Size(st::changePhoneIconSize) },
-		st::settingsBlockedListIconPadding);
-
-	(
-		std::move(showFinished) | rpl::take(1)
-	) | rpl::start_with_next([animate = std::move(icon.animate)] {
-		animate(anim::repeat::loop);
-	}, icon.widget->lifetime());
-	content->add(std::move(icon.widget));
-
-	content->add(
-		object_ptr<Ui::CenterWrap<>>(
-			content,
-			object_ptr<Ui::FlatLabel>(
-				content,
-				tr::lng_stats_loading(),
-				st::changePhoneTitle)),
-		st::changePhoneTitlePadding + st::boxRowPadding);
-
-	content->add(
-		object_ptr<Ui::CenterWrap<>>(
-			content,
-			object_ptr<Ui::FlatLabel>(
-				content,
-				tr::lng_stats_loading_subtext(),
-				st::statisticsLoadingSubtext)),
-		st::changePhoneDescriptionPadding + st::boxRowPadding);
-
-	::Settings::AddSkip(content, st::settingsBlockedListIconPadding.top());
 }
 
 void AddHeader(
@@ -471,6 +464,50 @@ void FillOverview(
 
 } // namespace
 
+void FillLoading(
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<bool> toggleOn,
+		rpl::producer<> showFinished) {
+	const auto emptyWrap = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(container)));
+	emptyWrap->toggleOn(std::move(toggleOn), anim::type::instant);
+
+	const auto content = emptyWrap->entity();
+	auto icon = ::Settings::CreateLottieIcon(
+		content,
+		{ .name = u"stats"_q, .sizeOverride = Size(st::changePhoneIconSize) },
+		st::settingsBlockedListIconPadding);
+
+	(
+		std::move(showFinished) | rpl::take(1)
+	) | rpl::start_with_next([animate = std::move(icon.animate)] {
+		animate(anim::repeat::loop);
+	}, icon.widget->lifetime());
+	content->add(std::move(icon.widget));
+
+	content->add(
+		object_ptr<Ui::CenterWrap<>>(
+			content,
+			object_ptr<Ui::FlatLabel>(
+				content,
+				tr::lng_stats_loading(),
+				st::changePhoneTitle)),
+		st::changePhoneTitlePadding + st::boxRowPadding);
+
+	content->add(
+		object_ptr<Ui::CenterWrap<>>(
+			content,
+			object_ptr<Ui::FlatLabel>(
+				content,
+				tr::lng_stats_loading_subtext(),
+				st::statisticsLoadingSubtext)),
+		st::changePhoneDescriptionPadding + st::boxRowPadding);
+
+	::Settings::AddSkip(content, st::settingsBlockedListIconPadding.top());
+}
+
 InnerWidget::InnerWidget(
 	QWidget *parent,
 	not_null<Controller*> controller,
@@ -544,7 +581,9 @@ void InnerWidget::fill() {
 	if (_state.stats.message) {
 		if (const auto i = _peer->owner().message(_contextId)) {
 			::Settings::AddSkip(inner);
-			inner->add(object_ptr<MessagePreview>(this, i, -1, -1, QImage()));
+			const auto preview = inner->add(
+				object_ptr<MessagePreview>(this, i, -1, -1, QImage()));
+			AddContextMenu(preview, _controller, i);
 			::Settings::AddSkip(inner);
 			::Settings::AddDivider(inner);
 		}
@@ -639,6 +678,8 @@ void InnerWidget::fillRecentPosts() {
 			info.forwardsCount,
 			std::move(cachedPreview));
 
+		AddContextMenu(button, _controller, item);
+
 		_messagePreviews.push_back(raw);
 		raw->show();
 		button->sizeValue(
@@ -657,25 +698,53 @@ void InnerWidget::fillRecentPosts() {
 		}
 	};
 
-	auto foundLoaded = false;
-	for (const auto &recent : stats.recentMessageInteractions) {
-		const auto messageWrap = content->add(
-			object_ptr<Ui::VerticalLayout>(content));
-		const auto msgId = recent.messageId;
-		if (const auto item = _peer->owner().message(_peer, msgId)) {
-			addMessage(messageWrap, item, recent);
-			foundLoaded = true;
-			continue;
+	const auto buttonWrap = container->add(
+		object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
+			container,
+			object_ptr<Ui::SettingsButton>(
+				container,
+				tr::lng_stories_show_more())));
+
+	constexpr auto kPerPage = int(10);
+	const auto max = stats.recentMessageInteractions.size();
+	if (_state.recentPostsExpanded) {
+		_state.recentPostsExpanded = std::max(
+			_state.recentPostsExpanded - kPerPage,
+			0);
+	}
+	const auto showMore = [=] {
+		const auto from = _state.recentPostsExpanded;
+		_state.recentPostsExpanded = std::min(
+			int(max),
+			_state.recentPostsExpanded + kPerPage);
+		if (_state.recentPostsExpanded == max) {
+			buttonWrap->toggle(false, anim::type::instant);
 		}
-		const auto callback = crl::guard(content, [=] {
+		for (auto i = from; i < _state.recentPostsExpanded; i++) {
+			const auto &recent = stats.recentMessageInteractions[i];
+			const auto messageWrap = content->add(
+				object_ptr<Ui::VerticalLayout>(content));
+			const auto msgId = recent.messageId;
 			if (const auto item = _peer->owner().message(_peer, msgId)) {
 				addMessage(messageWrap, item, recent);
-				content->resizeToWidth(content->width());
+				continue;
 			}
-		});
-		_peer->session().api().requestMessageData(_peer, msgId, callback);
-	}
-	if (!foundLoaded) {
+			const auto callback = crl::guard(content, [=] {
+				if (const auto item = _peer->owner().message(_peer, msgId)) {
+					addMessage(messageWrap, item, recent);
+					content->resizeToWidth(content->width());
+				}
+			});
+			_peer->session().api().requestMessageData(_peer, msgId, callback);
+		}
+		container->resizeToWidth(container->width());
+	};
+	const auto delay = st::defaultRippleAnimation.hideDuration;
+	buttonWrap->entity()->setClickedCallback([=] {
+		base::call_delayed(delay, crl::guard(container, showMore));
+	});
+	showMore();
+	if (_messagePreviews.empty()) {
 		wrap->toggle(false, anim::type::instant);
 	}
 }

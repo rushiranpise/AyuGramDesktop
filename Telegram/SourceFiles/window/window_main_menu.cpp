@@ -59,6 +59,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_domain.h"
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_config.h"
+#include "data/data_document_media.h"
 #include "data/data_folder.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -216,6 +217,9 @@ void SetupMenuBots(
 	const auto wrap = container->add(
 		object_ptr<Ui::VerticalLayout>(container));
 	const auto bots = &controller->session().attachWebView();
+	const auto iconLoadLifetime = wrap->lifetime().make_state<
+		rpl::lifetime
+	>();
 
 	rpl::single(
 		rpl::empty
@@ -225,7 +229,20 @@ void SetupMenuBots(
 		const auto width = container->widthNoMargins();
 		wrap->clear();
 		for (const auto &bot : bots->attachBots()) {
-			if (!bot.inMainMenu) {
+			const auto user = bot.user;
+			if (!bot.inMainMenu || !bot.media) {
+				continue;
+			} else if (const auto media = bot.media; !media->loaded()) {
+				if (!*iconLoadLifetime) {
+					auto &session = user->session();
+					*iconLoadLifetime = session.downloaderTaskFinished(
+					) | rpl::start_with_next([=] {
+						if (media->loaded()) {
+							iconLoadLifetime->destroy();
+							bots->notifyBotIconLoaded();
+						}
+					});
+				}
 				continue;
 			}
 			const auto button = Settings::AddButton(
@@ -244,7 +261,6 @@ void SetupMenuBots(
 					st::mainMenuButton.iconLeft,
 					(height - icon->height()) / 2);
 			}, button->lifetime());
-			const auto user = bot.user;
 			const auto weak = Ui::MakeWeak(container);
 			button->setAcceptBoth(true);
 			button->clicks(
@@ -911,28 +927,35 @@ void MainMenu::setupMenu() {
 		)->setClickedCallback([=] {
 			controller->showPeerHistory(controller->session().user());
 		});
-		addAction(
-			tr::ayu_LReadMessages(),
-			{ &st::ayuLReadMenuIcon }
-		)->setClickedCallback([=]
-		{
-			auto settings = &AyuSettings::getInstance();
-			auto prev = settings->sendReadMessages;
-			settings->set_sendReadMessages(false);
 
-			auto chats = controller->session().data().chatsList();
-			MarkAsReadChatList(chats);
+		const auto settings = &AyuSettings::getInstance();
 
-			settings->set_sendReadMessages(prev);
-		});
-		addAction(
-			tr::ayu_SReadMessages(),
-			{ &st::ayuSReadMenuIcon }
-		)->setClickedCallback([=]
-		{
-			auto box = Box<AyuUi::ConfirmationBox>(controller);
-			Ui::show(std::move(box));
-		});
+		if (settings->showLReadToggleInDrawer) {
+			addAction(
+				tr::ayu_LReadMessages(),
+				{&st::ayuLReadMenuIcon}
+			)->setClickedCallback([=]
+								  {
+									  auto prev = settings->sendReadMessages;
+									  settings->set_sendReadMessages(false);
+
+									  auto chats = controller->session().data().chatsList();
+									  MarkAsReadChatList(chats);
+
+									  settings->set_sendReadMessages(prev);
+								  });
+		}
+
+		if (settings->showSReadToggleInDrawer) {
+			addAction(
+				tr::ayu_SReadMessages(),
+				{&st::ayuSReadMenuIcon}
+			)->setClickedCallback([=]
+								  {
+									  auto box = Box<AyuUi::ConfirmationBox>(controller);
+									  Ui::show(std::move(box));
+								  });
+		}
 	} else {
 		addAction(
 			tr::lng_profile_add_contact(),
@@ -995,36 +1018,37 @@ void MainMenu::setupMenu() {
 	}, _nightThemeToggle->lifetime());
 
 	const auto settings = &AyuSettings::getInstance();
-	if (settings->showGhostToggleInDrawer)
-	{
+	if (settings->showGhostToggleInDrawer) {
 		_ghostModeToggle = addAction(
 			tr::ayu_GhostModeToggle(),
-            { &st::ayuGhostIcon }
+			{&st::ayuGhostIcon}
 		)->toggleOn(AyuSettings::get_ghostModeEnabledReactive());
 
 		_ghostModeToggle->toggledChanges(
 		) | rpl::start_with_next([=](bool ghostMode)
-		{
-			settings->set_ghostModeEnabled(ghostMode);
+								 {
+									 settings->set_ghostModeEnabled(ghostMode);
 
-			AyuSettings::save();
-		}, _ghostModeToggle->lifetime());
+									 AyuSettings::save();
+								 }, _ghostModeToggle->lifetime());
 	}
 
-	if (StreamerMode.value()) {
+	if (settings->showStreamerToggleInDrawer) {
 		_streamerModeToggle = addAction(
-			    tr::ayu_StreamerModeToggle(),
-			    { &st::ayuStreamerModeMenuIcon }
-	    )->toggleOn(rpl::single(AyuFeatures::StreamerMode::isEnabled()));
+			tr::ayu_StreamerModeToggle(),
+			{&st::ayuStreamerModeMenuIcon}
+		)->toggleOn(rpl::single(AyuFeatures::StreamerMode::isEnabled()));
 
 		_streamerModeToggle->toggledChanges(
-		) | rpl::start_with_next([=](bool enabled) {
-			if (enabled) {
-				AyuFeatures::StreamerMode::enable();
-			} else {
-				AyuFeatures::StreamerMode::disable();
-			}
-		}, _streamerModeToggle->lifetime());
+		) | rpl::start_with_next([=](bool enabled)
+								 {
+									 if (enabled) {
+										 AyuFeatures::StreamerMode::enable();
+									 }
+									 else {
+										 AyuFeatures::StreamerMode::disable();
+									 }
+								 }, _streamerModeToggle->lifetime());
 	}
 
 	Core::App().settings().systemDarkModeValue(

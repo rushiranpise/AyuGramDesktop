@@ -396,15 +396,8 @@ void ForwardPanel::paint(
 		.now = now,
 		.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
 		.pausedSpoiler = pausedSpoiler,
-		.elisionOneLine = true,
+		.elisionLines = 1,
 	});
-}
-
-void ClearDraftReplyTo(not_null<Data::Thread*> thread, FullMsgId equalTo) {
-	ClearDraftReplyTo(
-		thread->owningHistory(),
-		thread->topicRootId(),
-		equalTo);
 }
 
 void ClearDraftReplyTo(

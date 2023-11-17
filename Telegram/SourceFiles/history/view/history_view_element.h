@@ -49,6 +49,7 @@ enum class InfoDisplayType : char;
 struct StateRequest;
 struct TextState;
 class Media;
+class Reply;
 
 enum class Context : char {
 	History,
@@ -69,8 +70,6 @@ class ElementDelegate {
 public:
 	virtual Context elementContext() = 0;
 	virtual bool elementUnderCursor(not_null<const Element*> view) = 0;
-	[[nodiscard]] virtual float64 elementHighlightOpacity(
-		not_null<const HistoryItem*> item) const = 0;
 	virtual bool elementInSelectionMode() = 0;
 	virtual bool elementIntersectsRange(
 		not_null<const Element*> view,
@@ -120,8 +119,6 @@ public:
 class DefaultElementDelegate : public ElementDelegate {
 public:
 	bool elementUnderCursor(not_null<const Element*> view) override;
-	[[nodiscard]] float64 elementHighlightOpacity(
-		not_null<const HistoryItem*> item) const override;
 	bool elementInSelectionMode() override;
 	bool elementIntersectsRange(
 		not_null<const Element*> view,
@@ -270,6 +267,16 @@ struct TopicButton {
 	int nameVersion = 0;
 };
 
+struct SelectedQuote {
+	HistoryItem *item = nullptr;
+	TextWithEntities text;
+
+	explicit operator bool() const {
+		return item && !text.empty();
+	}
+	friend inline bool operator==(SelectedQuote, SelectedQuote) = default;
+};
+
 class Element
 	: public Object
 	, public RuntimeComposer<Element>
@@ -391,18 +398,23 @@ public:
 		QPoint point,
 		InfoDisplayType type) const;
 	virtual TextForMimeData selectedText(TextSelection selection) const = 0;
-	virtual TextWithEntities selectedQuote(TextSelection selection) const = 0;
-	virtual TextWithEntities selectedQuote(
-		const Ui::Text::String &text,
+	virtual SelectedQuote selectedQuote(
 		TextSelection selection) const = 0;
 	virtual TextSelection selectionFromQuote(
-		const TextWithEntities &quote) const = 0;
-	virtual TextSelection selectionFromQuote(
-		const Ui::Text::String &text,
+		not_null<HistoryItem*> item,
 		const TextWithEntities &quote) const = 0;
 	[[nodiscard]] virtual TextSelection adjustSelection(
 		TextSelection selection,
 		TextSelectType type) const;
+
+	[[nodiscard]] static SelectedQuote FindSelectedQuote(
+		const Ui::Text::String &text,
+		TextSelection selection,
+		not_null<HistoryItem*> item);
+	[[nodiscard]] static TextSelection FindSelectionFromQuote(
+		const Ui::Text::String &text,
+		not_null<HistoryItem*> item,
+		const TextWithEntities &quote);
 
 	[[nodiscard]] virtual auto reactionButtonParameters(
 		QPoint position,
@@ -422,6 +434,7 @@ public:
 	[[nodiscard]] virtual bool hasFromPhoto() const;
 	[[nodiscard]] virtual bool displayFromPhoto() const;
 	[[nodiscard]] virtual bool hasFromName() const;
+	[[nodiscard]] bool displayReply() const;
 	[[nodiscard]] virtual bool displayFromName() const;
 	[[nodiscard]] virtual TopicButton *displayedTopicButton() const;
 	[[nodiscard]] virtual bool displayForwardedFrom() const;
@@ -445,11 +458,12 @@ public:
 		std::optional<QPoint> pressPoint) const;
 	[[nodiscard]] virtual TimeId displayedEditDate() const;
 	[[nodiscard]] virtual bool hasVisibleText() const;
-	[[nodiscard]] virtual HistoryMessageReply *displayedReply() const;
 	virtual void applyGroupAdminChanges(
 		const base::flat_set<UserId> &changes) {
 	}
 	[[nodiscard]] virtual bool toggleSelectionByHandlerClick(
+		const ClickHandlerPtr &handler) const;
+	[[nodiscard]] virtual bool allowTextSelectionByHandler(
 		const ClickHandlerPtr &handler) const;
 
 	struct VerticalRepaintRange {
@@ -551,7 +565,6 @@ protected:
 
 	void clearSpecialOnlyEmoji();
 	void checkSpecialOnlyEmoji();
-	void refreshIsTopicRootReply();
 
 private:
 	// This should be called only from previousInBlocksChanged()

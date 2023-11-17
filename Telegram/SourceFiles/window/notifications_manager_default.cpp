@@ -847,7 +847,7 @@ void Notification::paintTitle(Painter &p) {
 		.spoiler = Ui::Text::DefaultSpoilerCache(),
 		.pausedEmoji = On(PowerSaving::kEmojiChat),
 		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
-		.elisionOneLine = true,
+		.elisionLines = 1,
 	});
 }
 

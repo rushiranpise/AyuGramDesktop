@@ -46,39 +46,22 @@
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
+#include "styles/style_ayu_icons.h"
+
 
 class PainterHighQualityEnabler;
 
-const char kStreamerMode[] =
-	"streamer-mode";
-
-base::options::toggle StreamerMode(
-	{
-		.id = kStreamerMode,
-		.name = "Show streamer mode toggles",
-		.description = "Streamer mode completely hides AyuGram windows and notifications from capture apps.",
-		.scope = base::options::windows,
-		.restartRequired = true
-	}
-);
-
-not_null<Ui::RpWidget *> AddInnerToggle(
-	not_null<Ui::VerticalLayout *> container,
-	const style::SettingsButton &st,
-	std::vector<not_null<Ui::AbstractCheckView *>> innerCheckViews,
-	not_null<Ui::SlideWrap<> *> wrap,
-	rpl::producer<QString> buttonLabel,
-	std::optional<QString> locked,
-	bool toggledWhenAll,
-	Settings::IconDescriptor &&icon)
+not_null<Ui::RpWidget *> AddInnerToggle(not_null<Ui::VerticalLayout *> container,
+										const style::SettingsButton &st,
+										std::vector<not_null<Ui::AbstractCheckView *>> innerCheckViews,
+										not_null<Ui::SlideWrap<> *> wrap,
+										rpl::producer<QString> buttonLabel,
+										bool toggledWhenAll)
 {
 	const auto button = container->add(object_ptr<Ui::SettingsButton>(
 		container,
 		nullptr,
-		st));
-	if (icon) {
-		AddButtonIcon(button, st, std::move(icon));
-	}
+		st::settingsButtonNoIcon));
 
 	const auto toggleButton = Ui::CreateChild<Ui::SettingsButton>(
 		container.get(),
@@ -175,7 +158,7 @@ not_null<Ui::RpWidget *> AddInnerToggle(
 																			   anim::type::normal);
 													 }
 												 }, toggleButton->lifetime());
-	checkView->setLocked(locked.has_value());
+	checkView->setLocked(false);
 	checkView->finishAnimating();
 
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
@@ -241,34 +224,23 @@ not_null<Ui::RpWidget *> AddInnerToggle(
 											   { arrow->update(); },
 											   toggled ? 0. : 1.,
 											   toggled ? 1. : 0.,
-											   st::slideWrapDuration);
+											   st::slideWrapDuration,
+											   anim::easeOutCubic);
 									   }, button->lifetime());
-
-	const auto handleLocked = [=]
-	{
-		if (locked.has_value()) {
-			Ui::Toast::Show(container, *locked);
-			return true;
-		}
-		return false;
-	};
+	wrap->ease = anim::easeOutCubic;
 
 	button->clicks(
 	) | start_with_next([=]
 						{
-							if (!handleLocked()) {
-								wrap->toggle(!wrap->toggled(), anim::type::normal);
-							}
+							wrap->toggle(!wrap->toggled(), anim::type::normal);
 						}, button->lifetime());
 
 	toggleButton->clicks(
 	) | start_with_next([=]
 						{
-							if (!handleLocked()) {
-								const auto checked = !checkView->checked();
-								for (const auto &innerCheck : state->innerChecks) {
-									innerCheck->setChecked(checked, anim::type::normal);
-								}
+							const auto checked = !checkView->checked();
+							for (const auto &innerCheck : state->innerChecks) {
+								innerCheck->setChecked(checked, anim::type::normal);
 							}
 						}, toggleButton->lifetime());
 
@@ -476,9 +448,7 @@ void Ayu::SetupGhostModeToggle(not_null<Ui::VerticalLayout *> container)
 		innerChecks,
 		raw,
 		tr::ayu_GhostModeToggle(),
-		std::nullopt,
-		true,
-		{});
+		true);
 	container->add(std::move(wrap));
 	container->widthValue(
 	) | start_with_next([=](int w)
@@ -598,9 +568,7 @@ void Ayu::SetupReadAfterActionToggle(not_null<Ui::VerticalLayout *> container)
 		innerChecks,
 		raw,
 		tr::ayu_MarkReadAfterAction(),
-		std::nullopt,
-		false,
-		{});
+		false);
 	container->add(std::move(wrap));
 	container->widthValue(
 	) | start_with_next([=](int w)
@@ -823,17 +791,17 @@ void Ayu::SetupCustomization(not_null<Ui::VerticalLayout *> container,
 
 	AddButton(
 		container,
-		tr::ayu_ShowGhostToggleInDrawer(),
+		tr::ayu_SimpleQuotesAndReplies(),
 		st::settingsButtonNoIcon
 	)->toggleOn(
-		rpl::single(settings->showGhostToggleInDrawer)
+		rpl::single(settings->simpleQuotesAndReplies)
 	)->toggledValue(
 	) | rpl::filter([=](bool enabled)
 					{
-						return (enabled != settings->showGhostToggleInDrawer);
+						return (enabled != settings->simpleQuotesAndReplies);
 					}) | start_with_next([=](bool enabled)
 										 {
-											 settings->set_showGhostToggleInDrawer(enabled);
+											 settings->set_simpleQuotesAndReplies(enabled);
 											 AyuSettings::save();
 										 }, container->lifetime());
 
@@ -855,8 +823,130 @@ void Ayu::SetupCustomization(not_null<Ui::VerticalLayout *> container,
 
 	AddSkip(container);
 	AddDivider(container);
+	SetupDrawerElements(container);
+	AddSkip(container);
+	AddDivider(container);
+	SetupTrayElements(container);
+	AddSkip(container);
+	AddDivider(container);
 	AddSkip(container);
 	SetupFonts(container, controller);
+}
+
+void Ayu::SetupDrawerElements(not_null<Ui::VerticalLayout *> container)
+{
+	auto settings = &AyuSettings::getInstance();
+
+	AddSkip(container);
+	AddSubsectionTitle(container, tr::ayu_DrawerElementsHeader());
+
+	AddButton(
+		container,
+		tr::ayu_LReadMessages(),
+		st::settingsButton,
+		{&st::ayuLReadMenuIcon}
+	)->toggleOn(
+		rpl::single(settings->showLReadToggleInDrawer)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showLReadToggleInDrawer);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showLReadToggleInDrawer(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
+
+	AddButton(
+		container,
+		tr::ayu_SReadMessages(),
+		st::settingsButton,
+		{&st::ayuSReadMenuIcon}
+	)->toggleOn(
+		rpl::single(settings->showSReadToggleInDrawer)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showSReadToggleInDrawer);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showSReadToggleInDrawer(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
+
+	AddButton(
+		container,
+		tr::ayu_GhostModeToggle(),
+		st::settingsButton,
+		{&st::ayuGhostIcon}
+	)->toggleOn(
+		rpl::single(settings->showGhostToggleInDrawer)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showGhostToggleInDrawer);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showGhostToggleInDrawer(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
+
+	AddButton(
+		container,
+		tr::ayu_StreamerModeToggle(),
+		st::settingsButton,
+		{&st::ayuStreamerModeMenuIcon}
+	)->toggleOn(
+		rpl::single(settings->showStreamerToggleInDrawer)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showStreamerToggleInDrawer);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showStreamerToggleInDrawer(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
+}
+
+void Ayu::SetupTrayElements(not_null<Ui::VerticalLayout *> container)
+{
+	auto settings = &AyuSettings::getInstance();
+
+	AddSkip(container);
+	AddSubsectionTitle(container, tr::ayu_TrayElementsHeader());
+
+	AddButton(
+		container,
+		tr::ayu_EnableGhostModeTray(),
+		st::settingsButtonNoIcon
+	)->toggleOn(
+		rpl::single(settings->showGhostToggleInTray)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showGhostToggleInTray);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showGhostToggleInTray(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
+
+	AddButton(
+		container,
+		tr::ayu_EnableStreamerModeTray(),
+		st::settingsButtonNoIcon
+	)->toggleOn(
+		rpl::single(settings->showStreamerToggleInTray)
+	)->toggledValue(
+	) | rpl::filter([=](bool enabled)
+					{
+						return (enabled != settings->showStreamerToggleInTray);
+					}) | start_with_next([=](bool enabled)
+										 {
+											 settings->set_showStreamerToggleInTray(enabled);
+											 AyuSettings::save();
+										 }, container->lifetime());
 }
 
 void Ayu::SetupShowPeerId(not_null<Ui::VerticalLayout *> container,
@@ -1062,13 +1152,6 @@ void Ayu::SetupSendConfirmations(not_null<Ui::VerticalLayout *> container)
 										 }, container->lifetime());
 }
 
-void Ayu::SetupExperimental(not_null<Ui::VerticalLayout *> container,
-							not_null<Window::SessionController *> controller)
-{
-	AddSubsectionTitle(container, tr::lng_settings_experimental());
-	AddPlatformOption(controller, container, StreamerMode, rpl::producer<>());
-}
-
 void Ayu::SetupAyuGramSettings(not_null<Ui::VerticalLayout *> container,
 							   not_null<Window::SessionController *> controller)
 {
@@ -1107,10 +1190,7 @@ void Ayu::SetupAyuGramSettings(not_null<Ui::VerticalLayout *> container,
 	AddSkip(container);
 	SetupSendConfirmations(container);
 	AddSkip(container);
-
 	AddDivider(container);
-	AddSkip(container);
-	SetupExperimental(container, controller);
 
 	AddDividerText(container, tr::ayu_SettingsWatermark());
 }

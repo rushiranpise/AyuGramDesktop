@@ -46,6 +46,11 @@ void Tray::create() {
 		}
 	}, _tray.lifetime());
 
+	Core::App().settings().trayIconMonochromeChanges(
+	) | rpl::start_with_next([=] {
+		updateIconCounters();
+	}, _tray.lifetime());
+
 	Core::App().passcodeLockChanges(
 	) | rpl::start_with_next([=] {
 		rebuildMenu();
@@ -95,26 +100,29 @@ void Tray::rebuildMenu() {
 			[=] { toggleSoundNotifications(); });
 	}
 
-	auto turnGhostModeText = _textUpdates.events(
-	) | rpl::map([=]
-	{
-		bool ghostModeEnabled = AyuSettings::get_ghostModeEnabled();
+	auto settings = &AyuSettings::getInstance();
 
-		return ghostModeEnabled
-			       ? tr::ayu_DisableGhostModeTray(tr::now)
-			       : tr::ayu_EnableGhostModeTray(tr::now);
-	});
-	_tray.addAction(std::move(turnGhostModeText), [=]
-	{
-		auto settings = &AyuSettings::getInstance();
-		bool ghostMode = AyuSettings::get_ghostModeEnabled();
+	if (settings->showGhostToggleInTray) {
+		auto turnGhostModeText = _textUpdates.events(
+		) | rpl::map([=]
+					 {
+						 bool ghostModeEnabled = AyuSettings::get_ghostModeEnabled();
 
-		settings->set_ghostModeEnabled(!ghostMode);
+						 return ghostModeEnabled
+								? tr::ayu_DisableGhostModeTray(tr::now)
+								: tr::ayu_EnableGhostModeTray(tr::now);
+					 });
+		_tray.addAction(std::move(turnGhostModeText), [=]
+		{
+			bool ghostMode = AyuSettings::get_ghostModeEnabled();
 
-		AyuSettings::save();
-	});
+			settings->set_ghostModeEnabled(!ghostMode);
 
-	if (StreamerMode.value()) {
+			AyuSettings::save();
+		});
+	}
+
+	if (settings->showStreamerToggleInTray) {
 		auto turnStreamerModeText = _textUpdates.events(
 		) | rpl::map([=] {
 			bool streamerModeEnabled = AyuFeatures::StreamerMode::isEnabled();
