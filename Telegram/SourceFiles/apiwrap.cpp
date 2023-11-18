@@ -118,6 +118,7 @@ constexpr auto kStickersByEmojiInvalidateTimeout = crl::time(6 * 1000);
 constexpr auto kNotifySettingSaveTimeout = crl::time(1000);
 constexpr auto kDialogsFirstLoad = 20;
 constexpr auto kDialogsPerPage = 500;
+constexpr auto kStatsSessionKillTimeout = 10 * crl::time(1000);
 
 using PhotoFileLocationId = Data::PhotoFileLocationId;
 using DocumentFileLocationId = Data::DocumentFileLocationId;
@@ -163,6 +164,7 @@ ApiWrap::ApiWrap(not_null<Main::Session*> session)
 , _fileLoader(std::make_unique<TaskQueue>(kFileLoaderQueueStopTimeout))
 , _topPromotionTimer([=] { refreshTopPromotion(); })
 , _updateNotifyTimer([=] { sendNotifySettingsUpdates(); })
+, _statsSessionKillTimer([=] { checkStatsSessions(); })
 , _authorizations(std::make_unique<Api::Authorizations>(this))
 , _attachedStickers(std::make_unique<Api::AttachedStickers>(this))
 , _blockedPeers(std::make_unique<Api::BlockedPeers>(this))
@@ -3614,11 +3616,12 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 	sendAction(action);
 
 	const auto clearCloudDraft = action.clearDraft;
+	const auto draftTopicRootId = action.replyTo.topicRootId;
 	const auto replyTo = action.replyTo.messageId
 		? peer->owner().message(action.replyTo.messageId)
 		: nullptr;
-	const auto topicRootId = action.replyTo.topicRootId
-		? action.replyTo.topicRootId
+	const auto topicRootId = draftTopicRootId
+		? draftTopicRootId
 		: replyTo
 		? replyTo->topicRootId()
 		: Data::ForumTopic::kGeneralId;
@@ -3658,7 +3661,10 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 		TextUtilities::Trim(sending);
 
 		_session->data().registerMessageRandomId(randomId, newId);
-		_session->data().registerMessageSentData(randomId, peer->id, sending.text);
+		_session->data().registerMessageSentData(
+			randomId,
+			peer->id,
+			sending.text);
 
 		MTPstring msgText(MTP_string(sending.text));
 		auto flags = NewMessageFlags(peer);
@@ -3720,8 +3726,8 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 		if (clearCloudDraft) {
 			sendFlags |= MTPmessages_SendMessage::Flag::f_clear_draft;
 			mediaFlags |= MTPmessages_SendMedia::Flag::f_clear_draft;
-			history->clearCloudDraft(topicRootId);
-			history->startSavingCloudDraft(topicRootId);
+			history->clearCloudDraft(draftTopicRootId);
+			history->startSavingCloudDraft(draftTopicRootId);
 		}
 		const auto sendAs = action.options.sendAs;
 		const auto messageFromId = sendAs
@@ -3758,7 +3764,7 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 				const MTP::Response &response) {
 			if (clearCloudDraft) {
 				history->finishSavingCloudDraft(
-					topicRootId,
+					draftTopicRootId,
 					UnixtimeFromMsgId(response.outerMsgId));
 			}
 		};
@@ -3772,7 +3778,7 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 			}
 			if (clearCloudDraft) {
 				history->finishSavingCloudDraft(
-					topicRootId,
+					draftTopicRootId,
 					UnixtimeFromMsgId(response.outerMsgId));
 			}
 		};
@@ -4338,6 +4344,32 @@ void ApiWrap::saveSelfBio(const QString &text) {
 	}).fail([=] {
 		_bio.requestId = 0;
 	}).send();
+}
+
+void ApiWrap::registerStatsRequest(MTP::DcId dcId, mtpRequestId id) {
+	_statsRequests[dcId].emplace(id);
+}
+
+void ApiWrap::unregisterStatsRequest(MTP::DcId dcId, mtpRequestId id) {
+	const auto i = _statsRequests.find(dcId);
+	Assert(i != end(_statsRequests));
+	const auto removed = i->second.remove(id);
+	Assert(removed);
+	if (i->second.empty()) {
+		_statsSessionKillTimer.callOnce(kStatsSessionKillTimeout);
+	}
+}
+
+void ApiWrap::checkStatsSessions() {
+	for (auto i = begin(_statsRequests); i != end(_statsRequests);) {
+		if (i->second.empty()) {
+			instance().killSession(
+				MTP::ShiftDcId(i->first, MTP::kStatsDcShift));
+			i = _statsRequests.erase(i);
+		} else {
+			++i;
+		}
+	}
 }
 
 Api::Authorizations &ApiWrap::authorizations() {
