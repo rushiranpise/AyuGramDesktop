@@ -59,7 +59,7 @@ const auto CommandByName = base::flat_map<QString, Command>{
 	{ u"close_telegram"_q    , Command::Close },
 	{ u"lock_telegram"_q     , Command::Lock },
 	{ u"minimize_telegram"_q , Command::Minimize },
-	{ u"quit_telegram"_q     , Command::Quit },
+//	{ u"quit_telegram"_q     , Command::Quit },
 
 	{ u"media_play"_q        , Command::MediaPlay },
 	{ u"media_pause"_q       , Command::MediaPause },
@@ -105,7 +105,7 @@ const auto CommandNames = base::flat_map<Command, QString>{
 	{ Command::Close          , u"close_telegram"_q },
 	{ Command::Lock           , u"lock_telegram"_q },
 	{ Command::Minimize       , u"minimize_telegram"_q },
-	{ Command::Quit           , u"quit_telegram"_q },
+//	{ Command::Quit           , u"quit_telegram"_q },
 
 	{ Command::MediaPlay      , u"media_play"_q },
 	{ Command::MediaPause     , u"media_pause"_q },
@@ -340,11 +340,11 @@ bool Manager::readCustomFile() {
 void Manager::fillDefaults() {
 	const auto ctrl = Platform::IsMac() ? u"meta"_q : u"ctrl"_q;
 
-	set(u"ctrl+w"_q, Command::Close);
+//	set(u"ctrl+w"_q, Command::Close);
 	set(u"ctrl+f4"_q, Command::Close);
 	set(u"ctrl+l"_q, Command::Lock);
 	set(u"ctrl+m"_q, Command::Minimize);
-	set(u"ctrl+q"_q, Command::Quit);
+//	set(u"ctrl+q"_q, Command::Quit);
 
 	set(u"media play"_q, Command::MediaPlay);
 	set(u"media pause"_q, Command::MediaPause);
