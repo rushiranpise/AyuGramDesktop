@@ -1749,7 +1749,11 @@ void ApiWrap::joinChannel(not_null<ChannelData*> channel) {
 
 		using Flag = ChannelDataFlag;
 		chatParticipants().loadSimilarChannels(channel);
-		channel->setFlags(channel->flags() | Flag::SimilarExpanded);
+
+		const auto settings = &AyuSettings::getInstance();
+		if (!settings->collapseSimilarChannels) {
+			channel->setFlags(channel->flags() | Flag::SimilarExpanded);
+		}
 	}
 }
 
