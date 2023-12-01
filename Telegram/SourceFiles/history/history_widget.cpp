@@ -170,7 +170,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
-#include "ayu/ayu_state.h"
+#include "ayu/utils/telegram_helpers.h"
 
 
 namespace {
@@ -1067,6 +1067,15 @@ void HistoryWidget::initTabbedSelector() {
 				Data::InsertCustomEmoji(_field.data(), data.document);
 			}
 		} else {
+			const auto settings = &AyuSettings::getInstance();
+			if (!settings->sendReadMessages && settings->markReadAfterSend) {
+				const auto lastMessage = history()->lastMessage();
+
+				if (lastMessage) {
+					readHistory(lastMessage);
+				}
+			}
+
 			controller()->sendingAnimation().appendSending(
 				data.messageSendingFrom);
 			const auto localId = data.messageSendingFrom.localId;
@@ -3969,8 +3978,7 @@ void HistoryWidget::send(Api::SendOptions options) {
     auto lastMessage = _history->lastMessage();
 	if (!settings->sendReadMessages && settings->markReadAfterSend && lastMessage)
 	{
-		AyuState::setAllowSendReadPacket(true);
-		_history->session().data().histories().readInboxOnNewMessage(lastMessage);
+		readHistory(lastMessage);
 	}
 
 	if (!_history) {

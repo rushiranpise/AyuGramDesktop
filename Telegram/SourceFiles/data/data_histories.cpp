@@ -249,16 +249,6 @@ void Histories::readInboxTill(
 
 	AyuSync::getInstance().syncRead(history, tillId);
 
-	// AyuGram sendReadMessages
-	const auto settings = &AyuSettings::getInstance();
-	auto allow = settings->sendReadMessages;
-	auto reallyAllow = AyuState::getAllowSendPacket(); // will return true if `allow`
-	if (!reallyAllow)
-	{
-		DEBUG_LOG(("[AyuGram] Don't read messages"));
-		return;
-	}
-
 	const auto needsRequest = history->readInboxTillNeedsRequest(tillId);
 	if (!needsRequest && !force) {
 		DEBUG_LOG(("Reading: readInboxTill finish 1."));
@@ -280,9 +270,8 @@ void Histories::readInboxTill(
 			sendPendingReadInbox(history);
 		}
 		return;
-	} else if (!needsRequest && (allow != reallyAllow && !force)
-		&& (!maybeState || !maybeState->willReadTill))
-	{
+	} else if (!needsRequest
+		&& (!maybeState || !maybeState->willReadTill)) {
 		return;
 	}
 	const auto stillUnread = history->countStillUnreadLocal(tillId);
@@ -587,6 +576,16 @@ void Histories::sendPendingReadInbox(not_null<History*> history) {
 
 void Histories::sendReadRequests() {
 	DEBUG_LOG(("Reading: send requests with count %1.").arg(_states.size()));
+
+	// AyuGram sendReadMessages
+	const auto settings = &AyuSettings::getInstance();
+	if (!settings->sendReadMessages)
+	{
+		DEBUG_LOG(("[AyuGram] Don't read messages"));
+		_states.clear();
+		return;
+	}
+
 	if (_states.empty()) {
 		return;
 	}
