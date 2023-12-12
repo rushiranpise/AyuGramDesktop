@@ -982,7 +982,7 @@ void MainMenu::setupMenu() {
 				{&st::ayuSReadMenuIcon}
 			)->setClickedCallback([=]
 								  {
-									  auto box = Box<AyuUi::ConfirmationBox>(controller);
+									  auto box = Box<AyuUi::ServerReadConfirmationBox>(controller);
 									  Ui::show(std::move(box));
 								  });
 		}
