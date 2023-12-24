@@ -627,6 +627,7 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 		channel->input
 	)).done([=](const MTPpremium_BoostsStatus &result) {
 		_boostStateResolving = nullptr;
+		channel->updateLevelHint(result.data().vlevel().v);
 		const auto submit = [=](Fn<void(Ui::BoostCounters)> done) {
 			applyBoost(channel, done);
 		};
@@ -734,6 +735,7 @@ void SessionNavigation::applyBoostsChecked(
 		_api.request(MTPpremium_GetBoostsStatus(
 			channel->input
 		)).done([=](const MTPpremium_BoostsStatus &result) {
+			channel->updateLevelHint(result.data().vlevel().v);
 			done(ParseBoostCounters(result));
 		}).fail([=](const MTP::Error &error) {
 			showToast(u"Error: "_q + error.type());
@@ -1218,6 +1220,10 @@ void SessionController::showGiftPremiumBox(UserData *user) {
 	} else {
 		_giftPremiumValidator.cancel();
 	}
+}
+
+void SessionController::showGiftPremiumsBox() {
+	_giftPremiumValidator.showChoosePeerBox();
 }
 
 void SessionController::init() {
