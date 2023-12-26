@@ -494,7 +494,7 @@ void PeerBubbleListPart::draw(
 				geometry.x(),
 				geometry.y(),
 				width(),
-				&cache->bg);
+				&cache->bg2);
 			if (peer.ripple->empty()) {
 				peer.ripple = nullptr;
 			}
