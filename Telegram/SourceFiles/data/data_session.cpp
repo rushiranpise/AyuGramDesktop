@@ -2266,7 +2266,7 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 	{
 		const auto msg = existing->originalText();
 
-		if (edit.textWithEntities == msg)
+		if (edit.textWithEntities == msg || msg.empty())
 		{
 			goto proceed;
 		}
