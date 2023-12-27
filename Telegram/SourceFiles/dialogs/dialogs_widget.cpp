@@ -1901,13 +1901,13 @@ void Widget::showMainMenu() {
 	controller()->widget()->showMainMenu();
 }
 
-void Widget::searchMessages(const QString &query, Key inChat) {
+void Widget::searchMessages(const QString &query, Key inChat, UserData *from) {
 	if (_childList) {
 		const auto forum = controller()->shownForum().current();
 		const auto topic = inChat.topic();
 		if ((forum && forum->channel() == inChat.peer())
 			|| (topic && topic->forum() == forum)) {
-			_childList->searchMessages(query, inChat);
+			_childList->searchMessages(query, inChat, from);
 			return;
 		}
 		hideChildList();
@@ -1948,6 +1948,11 @@ void Widget::searchMessages(const QString &query, Key inChat) {
 		searchMessages();
 
 		session().local().saveRecentSearchHashtags(query);
+	}
+
+	if (inChat && from) {
+		setSearchInChat(inChat, from);
+		applyFilterUpdate(true);
 	}
 }
 

@@ -88,6 +88,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QCoreApplication>
 #include <QtCore/QMimeData>
 
+// AyuGram includes
+#include "ayu/utils/telegram_helpers.h"
+
+
 enum StackItemType {
 	HistoryStackItem,
 	SectionStackItem,
@@ -718,9 +722,9 @@ void MainWidget::hideSingleUseKeyboard(FullMsgId replyToId) {
 	_history->hideSingleUseKeyboard(replyToId);
 }
 
-void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
+void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat, UserData *from) {
 	if (controller()->isPrimary()) {
-		_dialogs->searchMessages(query, inChat);
+		_dialogs->searchMessages(query, inChat, from);
 		if (isOneColumn()) {
 			_controller->clearSectionStack();
 		} else {
@@ -729,7 +733,7 @@ void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 	} else {
 		const auto searchIn = [&](not_null<Window::Controller*> window) {
 			if (const auto controller = window->sessionController()) {
-				controller->content()->searchMessages(query, inChat);
+				controller->content()->searchMessages(query, inChat, from);
 				controller->widget()->activate();
 			}
 		};
