@@ -88,10 +88,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QCoreApplication>
 #include <QtCore/QMimeData>
 
-// AyuGram includes
-#include "ayu/utils/telegram_helpers.h"
-
-
 enum StackItemType {
 	HistoryStackItem,
 	SectionStackItem,

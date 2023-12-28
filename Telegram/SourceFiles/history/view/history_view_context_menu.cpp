@@ -961,6 +961,7 @@ void AddMessageActions(
 		AyuUi::AddHistoryAction(menu, request.item);
 		AyuUi::AddHideMessageAction(menu, request.item);
 		AyuUi::AddUserMessagesAction(menu, request.item);
+		AyuUi::AddMessageDetailsAction(menu, request.item);
 	}
 
 	AddPostLinkAction(menu, request);
@@ -972,8 +973,7 @@ void AddMessageActions(
 	AddSelectionAction(menu, request, list);
 	AddRescheduleAction(menu, request, list);
 
-	if (request.item)
-	{
+	if (request.item) {
 		AyuUi::AddReadUntilAction(menu, request.item);
 	}
 }
@@ -1278,6 +1278,11 @@ void AddWhoReactedAction(
 		not_null<QWidget*> context,
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller) {
+	const auto settings = &AyuSettings::getInstance();
+	if (!AyuUi::needToShowItem(settings->showViewsPanelInContextMenu)) {
+		return;
+	}
+
 	const auto whoReadIds = std::make_shared<Api::WhoReadList>();
 	const auto weak = Ui::MakeWeak(menu.get());
 	const auto participantChosen = [=](uint64 id) {

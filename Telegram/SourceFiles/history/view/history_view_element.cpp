@@ -272,9 +272,11 @@ QString DateTooltipText(not_null<Element*> view) {
 				msgsigned->postAuthor);
 		}
 	}
-	dateText += '\n';
-	dateText += "ID: ";
-	dateText += QString::number(item->id.bare);
+	if (!item->isLocal()) { // local messages have strange ID
+		dateText += '\n';
+		dateText += "ID: ";
+		dateText += QString::number(item->id.bare);
+	}
 	return dateText;
 }
 
