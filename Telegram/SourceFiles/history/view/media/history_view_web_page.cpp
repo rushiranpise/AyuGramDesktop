@@ -69,7 +69,8 @@ constexpr auto kMaxOriginalEntryLines = 8192;
 				parent,
 				*document,
 				skipPremiumEffect,
-				spoiler));
+				spoiler,
+				/*ttlSeconds = */0));
 		} else if (const auto photo = std::get_if<PhotoData*>(&item)) {
 			result.push_back(std::make_unique<Data::MediaPhoto>(
 				parent,

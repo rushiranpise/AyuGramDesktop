@@ -41,6 +41,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_updates.h"
 #include "data/notify/data_notify_settings.h"
 #include "data/data_bot_app.h"
+#include "data/data_saved_messages.h"
+#include "data/data_saved_sublist.h"
 #include "data/data_scheduled_messages.h"
 #include "data/data_changes.h"
 #include "data/data_session.h"
@@ -150,9 +152,15 @@ struct HistoryItem::CreateConfig {
 	QString originalSenderName;
 	QString originalPostAuthor;
 
+	PeerId savedSublistPeer = 0;
+
 	QString forwardPsaType;
 	PeerId savedFromPeer = 0;
 	MsgId savedFromMsgId = 0;
+
+	PeerId savedFromSenderId = 0;
+	QString savedFromSenderName;
+	bool savedFromOutgoing = false;
 
 	TimeId editDate = 0;
 	HistoryMessageMarkupData markup;
@@ -180,6 +188,13 @@ void HistoryItem::FillForwardedInfo(
 		config.savedFromPeer = peerFromMTP(*savedFromPeer);
 		config.savedFromMsgId = savedFromMsgId->v;
 	}
+	config.savedFromSenderId = data.vsaved_from_id()
+		? peerFromMTP(*data.vsaved_from_id())
+		: PeerId();
+	config.savedFromSenderName = qs(
+		data.vsaved_from_name().value_or_empty());
+	config.savedFromOutgoing = data.is_saved_out();
+
 	config.imported = data.is_imported();
 }
 
@@ -259,7 +274,8 @@ std::unique_ptr<Data::Media> HistoryItem::CreateMedia(
 				item,
 				item->history()->owner().processDocument(document),
 				media.is_nopremium(),
-				media.is_spoiler());
+				media.is_spoiler(),
+				media.vttl_seconds().value_or_empty());
 		}, [](const MTPDdocumentEmpty &) -> Result {
 			return nullptr;
 		});
@@ -491,7 +507,7 @@ HistoryItem::HistoryItem(
 	}
 	if (!dropForwardInfo) {
 		config.originalDate = original->originalDate();
-		if (const auto info = original->hiddenSenderInfo()) {
+		if (const auto info = original->originalHiddenSenderInfo()) {
 			config.originalSenderName = info->name;
 		} else if (const auto originalSender = original->originalSender()) {
 			config.originalSenderId = originalSender->id;
@@ -515,6 +531,11 @@ HistoryItem::HistoryItem(
 			config.savedFromPeer = original->history()->peer->id;
 			config.savedFromMsgId = original->id;
 		//}
+
+		config.savedFromOutgoing = original->out();
+		config.savedFromSenderId = original->Get<HistoryMessageForwarded>()
+			? original->author()->id
+			: PeerId();
 	}
 	if (flags & MessageFlag::HasPostAuthor) {
 		config.postAuthor = postAuthor;
@@ -634,7 +655,8 @@ HistoryItem::HistoryItem(
 		this,
 		document,
 		skipPremiumEffect,
-		spoiler);
+		spoiler,
+		/*ttlSeconds = */0);
 	setText(caption);
 }
 
@@ -789,6 +811,9 @@ HistoryItem::~HistoryItem() {
 	clearSavedMedia();
 	if (const auto reply = Get<HistoryMessageReply>()) {
 		reply->clearData(this);
+	}
+	if (const auto saved = Get<HistoryMessageSaved>()) {
+		saved->sublist->removeOne(this);
 	}
 	clearDependencyMessage();
 	applyTTL(0);
@@ -1214,10 +1239,10 @@ PeerData *HistoryItem::computeDisplayFrom() const {
 	if (const auto sender = discussionPostOriginalSender()) {
 		return sender;
 	} else if (const auto forwarded = Get<HistoryMessageForwarded>()) {
-		if (_history->peer->isSelf()
-			|| _history->peer->isRepliesChat()
-			|| forwarded->imported) {
-			return forwarded->originalSender;
+		if (showForwardsFromSender(forwarded)) {
+			return forwarded->forwardOfForward()
+				? forwarded->savedFromSender
+				: forwarded->originalSender;
 		}
 	}
 	return author().get();
@@ -1234,10 +1259,10 @@ PeerData *HistoryItem::displayFrom() const {
 uint8 HistoryItem::colorIndex() const {
 	if (const auto from = displayFrom()) {
 		return from->colorIndex();
-	} else if (const auto info = hiddenSenderInfo()) {
+	} else if (const auto info = displayHiddenSenderInfo()) {
 		return info->colorIndex;
 	}
-	Unexpected("No displayFrom and no hiddenSenderInfo.");
+	Unexpected("No displayFrom and no displayHiddenSenderInfo.");
 }
 
 std::unique_ptr<HistoryView::Element> HistoryItem::createView(
@@ -1259,6 +1284,9 @@ void HistoryItem::invalidateChatListEntry() {
 	_history->lastItemDialogsView().itemInvalidated(this);
 	if (const auto topic = this->topic()) {
 		topic->lastItemDialogsView().itemInvalidated(this);
+	}
+	if (const auto sublist = savedSublist()) {
+		sublist->lastItemDialogsView().itemInvalidated(this);
 	}
 }
 
@@ -1680,7 +1708,8 @@ void HistoryItem::setStoryFields(not_null<Data::Story*> story) {
 			this,
 			document,
 			/*skipPremiumEffect=*/false,
-			spoiler);
+			spoiler,
+			/*ttlSeconds = */0);
 	}
 	setText(story->caption());
 }
@@ -2510,14 +2539,30 @@ PeerData *HistoryItem::originalSender() const {
 		return forwarded->originalSender;
 	}
 	const auto peer = _history->peer;
-	return (peer->isChannel() && !peer->isMegagroup()) ? peer : from();
+	return peer->isBroadcast() ? peer : from();
 }
 
-const HiddenSenderInfo *HistoryItem::hiddenSenderInfo() const {
+const HiddenSenderInfo *HistoryItem::originalHiddenSenderInfo() const {
 	if (const auto forwarded = Get<HistoryMessageForwarded>()) {
-		return forwarded->hiddenSenderInfo.get();
+		return forwarded->originalHiddenSenderInfo.get();
 	}
 	return nullptr;
+}
+
+const HiddenSenderInfo *HistoryItem::displayHiddenSenderInfo() const {
+	if (const auto forwarded = Get<HistoryMessageForwarded>()) {
+		return forwarded->savedFromHiddenSenderInfo
+			? forwarded->savedFromHiddenSenderInfo.get()
+			: forwarded->originalHiddenSenderInfo.get();
+	}
+	return nullptr;
+}
+
+bool HistoryItem::showForwardsFromSender(
+		not_null<const HistoryMessageForwarded*> forwarded) const {
+	const auto peer = history()->peer;
+	return !forwarded->story
+		&& (peer->isSelf() || peer->isRepliesChat() || forwarded->imported);
 }
 
 not_null<PeerData*> HistoryItem::fromOriginal() const {
@@ -3104,6 +3149,34 @@ bool HistoryItem::isEmpty() const {
 		&& !Has<HistoryMessageLogEntryOriginal>();
 }
 
+Data::SavedSublist *HistoryItem::savedSublist() const {
+	if (const auto saved = Get<HistoryMessageSaved>()) {
+		return saved->sublist;
+	}
+	return nullptr;
+}
+
+PeerData *HistoryItem::savedSublistPeer() const {
+	if (const auto sublist = savedSublist()) {
+		return sublist->peer();
+	}
+	return nullptr;
+}
+
+PeerData *HistoryItem::savedFromSender() const {
+	if (const auto forwarded = Get<HistoryMessageForwarded>()) {
+		return forwarded->savedFromSender;
+	}
+	return nullptr;
+}
+
+const HiddenSenderInfo *HistoryItem::savedFromHiddenSenderInfo() const {
+	if (const auto forwarded = Get<HistoryMessageForwarded>()) {
+		return forwarded->savedFromHiddenSenderInfo.get();
+	}
+	return nullptr;
+}
+
 TextWithEntities HistoryItem::notificationText(
 		NotificationTextOptions options) const {
 	auto result = [&] {
@@ -3156,16 +3229,25 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 			? tr::lng_from_you(tr::now)
 			: sender->shortName();
 	};
-	result.icon = (Get<HistoryMessageForwarded>() != nullptr)
+	const auto forwarded = Get<HistoryMessageForwarded>();
+	const auto forwardFromSender = forwarded
+		&& showForwardsFromSender(forwarded);
+	result.icon = (forwarded
+		&& (!forwardFromSender || forwarded->forwardOfForward()))
 		? ItemPreview::Icon::ForwardedMessage
 		: replyToStory().valid()
 		? ItemPreview::Icon::ReplyToStory
 		: ItemPreview::Icon::None;
 	const auto fromForwarded = [&]() -> std::optional<QString> {
-		if (const auto forwarded = Get<HistoryMessageForwarded>()) {
-			return forwarded->originalSender
-				? fromSender(forwarded->originalSender)
-				: forwarded->hiddenSenderInfo->name;
+		if (forwarded) {
+			const auto sender = forwarded->forwardOfForward()
+				? forwarded->savedFromSender
+				: forwarded->originalSender;
+			return sender
+				? fromSender(sender)
+				: forwarded->savedFromHiddenSenderInfo
+				? forwarded->savedFromHiddenSenderInfo->name
+				: forwarded->originalHiddenSenderInfo->name;
 		}
 		return {};
 	};
@@ -3255,8 +3337,27 @@ void HistoryItem::createComponents(CreateConfig &&config) {
 	} else if (config.inlineMarkup) {
 		mask |= HistoryMessageReplyMarkup::Bit();
 	}
+	if (_history->peer->isSelf()) {
+		mask |= HistoryMessageSaved::Bit();
+	}
 
 	UpdateComponents(mask);
+
+	if (const auto saved = Get<HistoryMessageSaved>()) {
+		if (!config.savedSublistPeer) {
+			if (config.savedFromPeer) {
+				config.savedSublistPeer = config.savedFromPeer;
+			} else if (config.originalSenderId) {
+				config.savedSublistPeer = config.originalSenderId;
+			} else if (!config.originalSenderName.isEmpty()) {
+				config.savedSublistPeer = PeerData::kSavedHiddenAuthorId;
+			} else {
+				config.savedSublistPeer = _history->session().userPeerId();
+			}
+		}
+		const auto peer = _history->owner().peer(config.savedSublistPeer);
+		saved->sublist = _history->owner().savedMessages().sublist(peer);
+	}
 
 	if (const auto reply = Get<HistoryMessageReply>()) {
 		reply->set(std::move(config.reply));
@@ -3343,9 +3444,10 @@ void HistoryItem::setupForwardedComponent(const CreateConfig &config) {
 		? _history->owner().peer(originalSender).get()
 		: nullptr;
 	if (!forwarded->originalSender) {
-		forwarded->hiddenSenderInfo = std::make_unique<HiddenSenderInfo>(
-			config.originalSenderName,
-			config.imported);
+		forwarded->originalHiddenSenderInfo
+			= std::make_unique<HiddenSenderInfo>(
+				config.originalSenderName,
+				config.imported);
 	}
 	forwarded->originalId = config.originalId;
 	forwarded->originalPostAuthor = config.originalPostAuthor;
@@ -3353,6 +3455,14 @@ void HistoryItem::setupForwardedComponent(const CreateConfig &config) {
 	forwarded->savedFromPeer = _history->owner().peerLoaded(
 		config.savedFromPeer);
 	forwarded->savedFromMsgId = config.savedFromMsgId;
+	forwarded->savedFromSender = _history->owner().peerLoaded(
+		config.savedFromSenderId);
+	forwarded->savedFromOutgoing = config.savedFromOutgoing;
+	if (!forwarded->savedFromSender
+		&& !config.savedFromSenderName.isEmpty()) {
+		forwarded->savedFromHiddenSenderInfo
+			= std::make_unique<HiddenSenderInfo>(config.savedFromSenderName, false);
+	}
 	forwarded->imported = config.imported;
 }
 
@@ -3551,6 +3661,9 @@ void HistoryItem::applyTTL(const MTPDmessageService &data) {
 
 void HistoryItem::createComponents(const MTPDmessage &data) {
 	auto config = CreateConfig();
+	config.savedSublistPeer = data.vsaved_peer_id()
+		? peerFromMTP(*data.vsaved_peer_id())
+		: PeerId();
 	if (const auto forwarded = data.vfwd_from()) {
 		forwarded->match([&](const MTPDmessageFwdHeader &data) {
 			FillForwardedInfo(config, data);
@@ -3636,25 +3749,43 @@ void HistoryItem::createServiceFromMtp(const MTPDmessage &message) {
 			const auto ttl = data.vttl_seconds();
 			Assert(ttl != nullptr);
 
-			setSelfDestruct(HistoryServiceSelfDestruct::Type::Video, *ttl);
-			if (out()) {
-				setServiceText({
-					tr::lng_ttl_video_sent(tr::now, Ui::Text::WithEntities)
-				});
-			} else {
-				auto result = PreparedServiceText();
-				result.links.push_back(fromLink());
-				result.text = tr::lng_ttl_video_received(
-					tr::now,
-					lt_from,
-					fromLinkText(), // Link 1.
-					Ui::Text::WithEntities);
-				setServiceText(std::move(result));
+			if (data.is_video()) {
+				setSelfDestruct(
+					HistoryServiceSelfDestruct::Type::Video,
+					*ttl);
+				if (out()) {
+					setServiceText({
+						tr::lng_ttl_video_sent(
+							tr::now,
+							Ui::Text::WithEntities)
+					});
+				} else {
+					auto result = PreparedServiceText();
+					result.links.push_back(fromLink());
+					result.text = tr::lng_ttl_video_received(
+						tr::now,
+						lt_from,
+						fromLinkText(), // Link 1.
+						Ui::Text::WithEntities);
+					setServiceText(std::move(result));
+				}
+			} else if (out()) {
+				auto text = (data.is_voice()
+					? tr::lng_ttl_voice_sent
+					: data.is_round()
+					? tr::lng_ttl_round_sent
+					: tr::lng_message_empty)(tr::now, Ui::Text::WithEntities);
+				setServiceText({ std::move(text) });
 			}
 		} else {
-			setServiceText({
-				tr::lng_ttl_video_expired(tr::now, Ui::Text::WithEntities)
-			});
+			auto text = (data.is_video()
+				? tr::lng_ttl_video_expired
+				: data.is_voice()
+				? tr::lng_ttl_voice_expired
+				: data.is_round()
+				? tr::lng_ttl_round_expired
+				: tr::lng_message_empty)(tr::now, Ui::Text::WithEntities);
+			setServiceText({ std::move(text) });
 		}
 	}, [&](const MTPDmessageMediaStory &data) {
 		setServiceText(prepareStoryMentionText());

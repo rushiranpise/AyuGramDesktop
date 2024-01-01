@@ -1222,8 +1222,8 @@ void SessionController::showGiftPremiumBox(UserData *user) {
 	}
 }
 
-void SessionController::showGiftPremiumsBox() {
-	_giftPremiumValidator.showChoosePeerBox();
+void SessionController::showGiftPremiumsBox(const QString &ref) {
+	_giftPremiumValidator.showChoosePeerBox(ref);
 }
 
 void SessionController::init() {
