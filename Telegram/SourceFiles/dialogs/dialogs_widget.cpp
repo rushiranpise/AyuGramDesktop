@@ -558,11 +558,13 @@ void Widget::chosenRow(const ChosenRow &row) {
 		}
 		return;
 	} else if (history) {
+		const auto settings = &AyuSettings::getInstance();
 		const auto peer = history->peer;
 		if (row.message.fullId.msg == ShowAtUnreadMsgId) {
 			if (row.userpicClick
 				&& peer->hasActiveStories()
-				&& !peer->isSelf()) {
+				&& !peer->isSelf()
+				&& !settings->disableStories) {
 				controller()->openPeerStories(peer->id);
 				return;
 			}
@@ -1519,6 +1521,13 @@ void Widget::updateStoriesVisibility() {
 	if (!_stories) {
 		return;
 	}
+
+	const auto settings = &AyuSettings::getInstance();
+	if (settings->disableStories) {
+		_stories->setVisible(false);
+		return;
+	}
+
 	const auto hidden = (_showAnimation != nullptr)
 		|| _openedForum
 		|| !_widthAnimationCache.isNull()
