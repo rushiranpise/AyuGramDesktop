@@ -61,6 +61,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 #include <QtSvg/QSvgRenderer>
 
+// AyuGram includes
+#include "ayu/utils/telegram_helpers.h"
+#include "window/window_session_controller.h"
+#include "data/data_user.h"
+
+
 namespace {
 
 constexpr auto kStickersPerRow = 5;
@@ -536,6 +542,26 @@ void StickerSetBox::updateButtons() {
 					? tr::lng_stickers_copied_emoji(tr::now)
 					: tr::lng_stickers_copied(tr::now));
 		};
+		const auto addAuthorPack = [=](const std::shared_ptr<base::unique_qptr<Ui::PopupMenu>>& menu) {
+			if (type == Data::StickersType::Stickers) {
+				(*menu)->addAction(tr::ayu_MessageDetailsPackOwnerPC(tr::now), [=]
+				{
+					searchById(_inner->setId() >> 32, _session, [=](const QString &username, UserData *user)
+					{
+						if (!user) {
+							showToast(tr::ayu_MessageDetailsPackOwnerNotFoundPC(tr::now));
+							return;
+						}
+
+						if (const auto window = _session->tryResolveWindow()) {
+							if (const auto mainWidget = window->widget()->sessionController()) {
+								mainWidget->showPeer(user);
+							}
+						}
+					});
+				}, &st::menuIconProfile);
+			}
+		};
 		if (_inner->notInstalled()) {
 			if (!_session->premium()
 				&& _session->premiumPossible()
@@ -582,6 +608,7 @@ void StickerSetBox::updateButtons() {
 							: tr::lng_stickers_share_pack)(tr::now),
 						[=] { share(); closeBox(); },
 						&st::menuIconShare);
+					addAuthorPack(menu);
 					(*menu)->popup(QCursor::pos());
 					return true;
 				});
@@ -631,6 +658,7 @@ void StickerSetBox::updateButtons() {
 							archive,
 							&st::menuIconArchive);
 					}
+					addAuthorPack(menu);
 					(*menu)->popup(QCursor::pos());
 					return true;
 				});
