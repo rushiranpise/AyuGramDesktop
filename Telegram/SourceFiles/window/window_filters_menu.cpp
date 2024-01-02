@@ -313,8 +313,15 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 			&_session->session(),
 			id
 		) | rpl::start_with_next([=](const Dialogs::UnreadState &state) {
-			const auto count = (state.chats + state.marks);
-			const auto muted = (state.chatsMuted + state.marksMuted);
+			auto count = (state.chats + state.marks);
+			auto muted = (state.chatsMuted + state.marksMuted);
+
+			const auto settings = &AyuSettings::getInstance();
+			if (settings->hideNotificationCounters) {
+				count = 0;
+				muted = 0;
+			}
+
 			const auto string = !count
 				? QString()
 				: (count > 99)
