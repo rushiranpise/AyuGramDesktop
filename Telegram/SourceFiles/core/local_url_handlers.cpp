@@ -1004,6 +1004,10 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			AyuUrlHandlers::ResolveUser
 		},
 		{
+			u"^ayu/?(.+)?(#|$)"_q,
+			AyuUrlHandlers::HandleAyu
+		},
+		{
 			u"^([^\\?]+)(\\?|#|$)"_q,
 			HandleUnknown
 		},
