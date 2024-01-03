@@ -4752,6 +4752,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ViewFiltersMenuText" = "View Filters";
 "ayu_PeekOnlineSuccess" = "Peeked via";
 "ayu_OneViewTTL" = "one view";
+"ayu_OnePlayTTL" = "one play";
 "ayu_UserMessagesMenuText" = "User Messages";
 "ayu_ReadUntilMenuText" = "Read Message";
 "ayu_DeleteKeepLocally" = "Keep locally";
@@ -4781,6 +4782,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_AyuForwardStatusLoadingMedia" = "Loading media…";
 "ayu_AyuForwardForwardingDescription" = "Please keep this window open while AyuGram is forwarding your messages.";
 "ayu_AyuForwardLoadingMediaDescription" = "Please keep this window open while AyuGram is downloading media from your messages.";
+"ayu_UserNotFoundMessage" = "User not found.";
 "ayu_DeleteDateMenuText" = "Delete Date";
 "ayu_ReadDateMenuText" = "Read Date";
 "ayu_ContentsReadDateMenuText" = "Contents Read Date";
