@@ -32,6 +32,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QAction>
 
+// AyuGram includes
+#include "ayu/ui/settings/settings_ayu.h"
+
+
 namespace Settings {
 
 void FillMenu(
@@ -56,6 +60,11 @@ void FillMenu(
 			tr::lng_settings_password_abort(tr::now),
 			[=] { api->cloudPassword().clearUnconfirmedPassword(); },
 			&st::menuIconCancel);
+	} else if (type == Ayu::Id()) {
+		addAction(
+			tr::lng_restart_button(tr::now),
+			[=] { Core::Restart(); },
+			&st::menuIconRestore);
 	} else {
 		const auto &list = Core::App().domain().accounts();
 		if (list.size() < Core::App().domain().maxAccounts()) {

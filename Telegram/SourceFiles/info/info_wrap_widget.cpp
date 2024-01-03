@@ -49,6 +49,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 #include "styles/style_layers.h"
 
+// AyuGram includes
+#include "ayu/ui/settings/settings_ayu.h"
+
+
 namespace Info {
 namespace {
 
@@ -348,7 +352,8 @@ void WrapWidget::createTopBar() {
 		&& (section.settingsType()
 				== ::Settings::CloudPasswordEmailConfirmId()
 			|| section.settingsType() == ::Settings::Main::Id()
-			|| section.settingsType() == ::Settings::Chat::Id())) {
+			|| section.settingsType() == ::Settings::Chat::Id()
+			|| section.settingsType() == ::Settings::Ayu::Id())) {
 		addTopBarMenuButton();
 	} else if (section.type() == Section::Type::Downloads) {
 		auto &manager = Core::App().downloadManager();
