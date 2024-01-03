@@ -121,9 +121,9 @@ constexpr auto kTooltipDelay = crl::time(10000);
 	static auto ScaledLogoNoMargin = base::flat_map<int, QImage>();
 	static auto ScaledLogoDark = base::flat_map<int, QImage>();
 	static auto ScaledLogoLight = base::flat_map<int, QImage>();
-	static auto lastUsedIcon = currentAppLogoName();
+	static auto lastUsedIcon = AyuAssets::currentAppLogoName();
 
-	if (lastUsedIcon != currentAppLogoName()) {
+	if (lastUsedIcon != AyuAssets::currentAppLogoName()) {
 		ScaledLogo = base::flat_map<int, QImage>();
 		ScaledLogoNoMargin = base::flat_map<int, QImage>();
 		ScaledLogoDark = base::flat_map<int, QImage>();

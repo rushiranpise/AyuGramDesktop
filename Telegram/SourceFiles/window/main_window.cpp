@@ -82,11 +82,11 @@ base::options::toggle OptionNewWindowsSizeAsFirst({
 const char kOptionNewWindowsSizeAsFirst[] = "new-windows-size-as-first";
 
 QImage Logo() {
-	return currentAppLogo();
+	return AyuAssets::currentAppLogo();
 }
 
 QImage LogoNoMargin() {
-	return currentAppLogoNoMargin();
+	return AyuAssets::currentAppLogoNoMargin();
 }
 
 void ConvertIconToBlack(QImage &image) {
@@ -141,7 +141,7 @@ void OverrideApplicationIcon(QImage image) {
 }
 
 QIcon CreateOfficialIcon(Main::Session *session) {
-	return QIcon(Ui::PixmapFromImage(currentAppLogo()));
+	return QIcon(Ui::PixmapFromImage(AyuAssets::currentAppLogo()));
 }
 
 QIcon CreateIcon(Main::Session *session, bool returnNullIfDefault) {
