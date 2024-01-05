@@ -41,6 +41,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/item_text_options.h"
 #include "lang/lang_keys.h"
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
+
 namespace {
 
 bool PeerCallKnown(not_null<PeerData*> peer) {
@@ -811,5 +815,6 @@ void ClearMediaAsExpired(not_null<HistoryItem*> item) {
 }
 
 [[nodiscard]] bool IsVoiceOncePlayable(not_null<HistoryItem*> item) {
-	return !item->out() && item->media()->ttlSeconds();
+	const auto settings = &AyuSettings::getInstance();
+	return !item->out() && item->media()->ttlSeconds() && !settings->saveDeletedMessages;
 }
