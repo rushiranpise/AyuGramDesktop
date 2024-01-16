@@ -813,8 +813,3 @@ void ClearMediaAsExpired(not_null<HistoryItem*> item) {
 		}
 	}
 }
-
-[[nodiscard]] bool IsVoiceOncePlayable(not_null<HistoryItem*> item) {
-	const auto settings = &AyuSettings::getInstance();
-	return !item->out() && item->media()->ttlSeconds() && !settings->saveDeletedMessages;
-}
