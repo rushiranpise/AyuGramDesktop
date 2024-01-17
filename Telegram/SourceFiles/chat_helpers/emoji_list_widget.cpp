@@ -48,6 +48,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h"
 
+// AyuGram includes
+#include "data/data_file_origin.h"
+#include "qapplication.h"
+
+
 namespace ChatHelpers {
 namespace {
 
@@ -473,7 +478,8 @@ EmojiListWidget::EmojiListWidget(
 , _overBg(st::emojiPanRadius, st().overBg)
 , _collapsedBg(st::emojiPanExpand.height / 2, st().headerFg)
 , _picker(this, st())
-, _showPickerTimer([=] { showPicker(); }) {
+, _showPickerTimer([=] { showPicker(); })
+, _previewTimer([=] { showPreview(); }) {
 	setMouseTracking(true);
 	if (st().bg->c.alpha() > 0) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
@@ -1585,11 +1591,20 @@ void EmojiListWidget::mousePressEvent(QMouseEvent *e) {
 			}
 		}
 	}
+
+	_previewTimer.callOnce(QApplication::startDragTime());
 }
 
 void EmojiListWidget::mouseReleaseEvent(QMouseEvent *e) {
+	_previewTimer.cancel();
+
 	auto pressed = _pressed;
 	setPressed(v::null);
+	if (_previewShown) {
+		_previewShown = false;
+		return;
+	}
+
 	_lastMousePos = e->globalPos();
 	if (!_picker->isHidden()) {
 		if (_picker->rect().contains(_picker->mapFromGlobal(_lastMousePos))) {
@@ -2327,7 +2342,7 @@ bool EmojiListWidget::eventHook(QEvent *e) {
 }
 
 void EmojiListWidget::updateSelected() {
-	if (!v::is_null(_pressed) || !v::is_null(_pickerSelected)) {
+	if ((!v::is_null(_pressed) || !v::is_null(_pickerSelected)) && !_previewShown) {
 		return;
 	}
 
@@ -2386,6 +2401,31 @@ void EmojiListWidget::setSelected(OverState newSelected) {
 			_picker->hideAnimated();
 		} else {
 			_picker->showAnimated();
+		}
+	}
+
+	if (_previewShown && _pressed != _selected) {
+		if (const auto over = std::get_if<OverEmoji>(&_selected)) {
+			_pressed = _selected;
+
+			const auto section = over ? over->section : -1;
+			const auto index = over ? over->index : -1;
+
+			if (const auto document = lookupCustomEmoji(index, section)) {
+				_show->showMediaPreview(document->stickerSetOrigin(), document);
+			}
+		}
+	}
+}
+
+void EmojiListWidget::showPreview() {
+	if (const auto over = std::get_if<OverEmoji>(&_selected)) {
+		const auto section = over ? over->section : -1;
+		const auto index = over ? over->index : -1;
+
+		if (const auto document = lookupCustomEmoji(index, section)) {
+			_show->showMediaPreview(document->stickerSetOrigin(), document);
+			_previewShown = true;
 		}
 	}
 }
