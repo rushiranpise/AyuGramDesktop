@@ -30,6 +30,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "mainwindow.h"
 
+// AyuGram includes
+#include "ayu/ayu_url_handlers.h"
+
+
 namespace Core {
 namespace {
 
@@ -231,6 +235,10 @@ bool UiIntegration::handleUrlClick(
 		return true;
 	} else if (local.startsWith(u"internal:"_q, Qt::CaseInsensitive)) {
 		Core::App().openInternalUrl(local, context);
+		return true;
+	}
+
+	if (AyuUrlHandlers::TryHandleSpotify(url)) {
 		return true;
 	}
 
