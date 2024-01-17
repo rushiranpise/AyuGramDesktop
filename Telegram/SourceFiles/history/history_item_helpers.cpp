@@ -791,6 +791,11 @@ void ShowTrialTranscribesToast(int left, TimeId until) {
 }
 
 void ClearMediaAsExpired(not_null<HistoryItem*> item) {
+	const auto settings = &AyuSettings::getInstance();
+	if (settings->saveDeletedMessages) {
+		return;
+	}
+
 	if (const auto media = item->media()) {
 		if (!media->ttlSeconds()) {
 			return;
