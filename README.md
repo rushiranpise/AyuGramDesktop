@@ -25,8 +25,19 @@ And many more. Check out our [Documentation](https://docs.ayugram.one/desktop/).
 
 ### Windows
 
+#### Official
+
 You can download prebuilt Windows binary from [Releases tab](https://github.com/AyuGram/AyuGramDesktop/releases) or from
 the [Telegram topic](https://t.me/ayugramchat/12788).
+
+#### Scoop
+
+```bash
+scoop bucket add extras
+scoop install ayugram
+```
+
+#### Self-built
 
 Follow [official guide](https://github.com/AyuGram/AyuGramDesktop/blob/dev/docs/building-win-x64.md) if you want to
 build by yourself.
