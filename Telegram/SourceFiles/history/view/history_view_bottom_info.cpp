@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/features/messageshot/message_shot.h"
 
 
 namespace HistoryView {
@@ -132,7 +133,7 @@ TextState BottomInfo::textState(
 	}
 	const auto textWidth = _authorEditedDate.maxWidth();
 	auto withTicksWidth = textWidth;
-	if (_data.flags & (Data::Flag::OutLayout | Data::Flag::Sending)) {
+	if (!AyuFeatures::MessageShot::isTakingShot() && _data.flags & (Data::Flag::OutLayout | Data::Flag::Sending)) {
 		withTicksWidth += st::historySendStateSpace;
 	}
 	if (!_views.isEmpty()) {
@@ -263,7 +264,7 @@ void BottomInfo::paint(
 
 	auto right = position.x() + width();
 	const auto firstLineBottom = position.y() + st::msgDateFont->height;
-	if (_data.flags & Data::Flag::OutLayout) {
+	if (!AyuFeatures::MessageShot::isTakingShot() && _data.flags & Data::Flag::OutLayout) {
 		const auto &icon = (_data.flags & Data::Flag::Sending)
 			? (inverted
 				? st->historySendingInvertedIcon()
@@ -332,7 +333,7 @@ void BottomInfo::paint(
 			firstLineBottom + st::historyViewsTop,
 			outerWidth);
 	}
-	if ((_data.flags & Data::Flag::Sending)
+	if (!AyuFeatures::MessageShot::isTakingShot() && (_data.flags & Data::Flag::Sending)
 		&& !(_data.flags & Data::Flag::OutLayout)) {
 		right -= st::historySendStateSpace;
 		const auto &icon = inverted
@@ -558,7 +559,7 @@ void BottomInfo::layoutReactionsText() {
 
 QSize BottomInfo::countOptimalSize() {
 	auto width = 0;
-	if (_data.flags & (Data::Flag::OutLayout | Data::Flag::Sending)) {
+	if (!AyuFeatures::MessageShot::isTakingShot() && _data.flags & (Data::Flag::OutLayout | Data::Flag::Sending)) {
 		width += st::historySendStateSpace;
 	}
 	width += _authorEditedDate.maxWidth();

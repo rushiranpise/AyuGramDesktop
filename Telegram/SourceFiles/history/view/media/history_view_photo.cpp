@@ -39,6 +39,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "styles/style_chat.h"
 
+// AyuGran includes
+#include "ayu/features/messageshot/message_shot.h"
+
+
 namespace HistoryView {
 namespace {
 
@@ -902,6 +906,10 @@ bool Photo::dataLoaded() const {
 }
 
 bool Photo::needInfoDisplay() const {
+	if (AyuFeatures::MessageShot::ignoreRender(AyuFeatures::MessageShot::RenderPart::Date)) {
+		return false;
+	}
+
 	if (_parent->data()->isFakeBotAbout()) {
 		return false;
 	}

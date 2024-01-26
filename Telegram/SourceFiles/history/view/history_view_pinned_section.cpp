@@ -53,6 +53,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtCore/QMimeData>
 
+// AyuGram includes
+#include "ayu/features/messageshot/message_shot.h"
+
+
 namespace HistoryView {
 namespace {
 
@@ -142,6 +146,10 @@ PinnedWidget::PinnedWidget(
 	_topBar->deleteSelectionRequest(
 	) | rpl::start_with_next([=] {
 		confirmDeleteSelected();
+	}, _topBar->lifetime());
+	_topBar->messageShotSelectionRequest(
+	) | rpl::start_with_next([=] {
+		AyuFeatures::MessageShot::Wrapper(_inner);
 	}, _topBar->lifetime());
 	_topBar->forwardSelectionRequest(
 	) | rpl::start_with_next([=] {

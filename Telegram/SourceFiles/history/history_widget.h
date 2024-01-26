@@ -261,6 +261,7 @@ public:
 
 	void forwardSelected();
 	void confirmDeleteSelected();
+	void messageShotSelected();
 	void clearSelected();
 
 	[[nodiscard]] SendMenu::Type sendMenuType() const;
