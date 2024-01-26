@@ -74,6 +74,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ui/settings/settings_ayu.h"
+#include "ayu/ui/utils/ayu_profile_values.h"
 
 
 namespace Settings {
@@ -145,7 +146,7 @@ Cover::Cover(
 	_name->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
 
 	_phone->setSelectable(true);
-	_phone->setContextCopyText(tr::lng_profile_copy_phone(tr::now));
+	_phone->setContextCopyText(tr::ayu_ContextCopyID(tr::now));
 
 	initViewers();
 	setupChildGeometry();
@@ -198,7 +199,7 @@ void Cover::initViewers() {
 		refreshNameGeometry(width());
 	}, lifetime());
 
-	Info::Profile::PhoneValue(
+	IDValue(
 		_user
 	) | rpl::start_with_next([=](const TextWithEntities &value) {
 		_phone->setText(value.text);
