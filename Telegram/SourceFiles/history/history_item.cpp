@@ -786,7 +786,7 @@ HistoryItem::HistoryItem(
 : id(id)
 , _history(history)
 , _from(from ? history->owner().peer(from) : history->peer)
-, _flags(FinalizeMessageFlags(flags))
+, _flags(FinalizeMessageFlags(history, flags))
 , _date(date) {
 	if (isHistoryEntry() && IsClientMsgId(id)) {
 		_history->registerClientSideMessage(this);
@@ -901,13 +901,14 @@ void HistoryItem::updateDependentServiceText() {
 	}
 }
 
-bool HistoryItem::updateServiceDependent(bool force) {
+void HistoryItem::updateServiceDependent(bool force) {
 	auto dependent = GetServiceDependentData();
 	Assert(dependent != nullptr);
 
 	if (!force) {
 		if (!dependent->msgId || dependent->msg) {
-			return true;
+			dependent->pendingResolve = false;
+			return;
 		}
 	}
 
@@ -939,6 +940,17 @@ bool HistoryItem::updateServiceDependent(bool force) {
 			}
 		}
 	}
+
+	// Record resolve state for upcoming on-demand resolving.
+	if (dependent->msg || !dependent->msgId || force) {
+		dependent->pendingResolve = false;
+	} else {
+		dependent->pendingResolve = true;
+		dependent->requestedResolve = false;
+	}
+
+	// updateDependentServiceText may call UpdateComponents!
+	// So the `dependent` pointer becomes invalid.
 	if (dependent->msg) {
 		updateDependentServiceText();
 	} else if (force) {
@@ -951,7 +963,6 @@ bool HistoryItem::updateServiceDependent(bool force) {
 	if (force && gotDependencyItem) {
 		Core::App().notifications().checkDelayed();
 	}
-	return (dependent->msg || !dependent->msgId);
 }
 
 MsgId HistoryItem::dependencyMsgId() const {
@@ -969,9 +980,49 @@ void HistoryItem::checkBuyButton() {
 	}
 }
 
+void HistoryItem::resolveDependent(
+		not_null<HistoryServiceDependentData*> dependent) {
+	if (!dependent->pendingResolve || dependent->requestedResolve) {
+		return;
+	}
+	dependent->requestedResolve = true;
+	RequestDependentMessageItem(
+		this,
+		(dependent->peerId ? dependent->peerId : _history->peer->id),
+		dependent->msgId);
+}
+
+void HistoryItem::resolveDependent(not_null<HistoryMessageReply*> reply) {
+	if (!reply->acquireResolve()) {
+		return;
+	} else if (const auto messageId = reply->messageId()) {
+		RequestDependentMessageItem(
+			this,
+			reply->externalPeerId(),
+			reply->messageId());
+	} else if (reply->storyId()) {
+		RequestDependentMessageStory(
+			this,
+			reply->externalPeerId(),
+			reply->storyId());
+	}
+}
+
+void HistoryItem::resolveDependent() {
+	if (const auto dependent = GetServiceDependentData()) {
+		resolveDependent(dependent);
+	} else if (const auto reply = Get<HistoryMessageReply>()) {
+		resolveDependent(reply);
+	}
+}
+
 bool HistoryItem::notificationReady() const {
 	if (const auto dependent = GetServiceDependentData()) {
-		return (dependent->msg || !dependent->msgId);
+		if (dependent->msg || !dependent->msgId) {
+			return true;
+		}
+		const_cast<HistoryItem*>(this)->resolveDependent(
+			const_cast<HistoryServiceDependentData*>(dependent));
 	}
 	return true;
 }
@@ -2463,8 +2514,7 @@ const std::vector<Data::MessageReaction> &HistoryItem::reactions() const {
 }
 
 bool HistoryItem::reactionsAreTags() const {
-	// Disable reactions as tags for now.
-	return false;// _flags & MessageFlag::ReactionsAreTags;
+	return _flags & MessageFlag::ReactionsAreTags;
 }
 
 auto HistoryItem::recentReactions() const
@@ -3225,6 +3275,8 @@ TextWithEntities HistoryItem::notificationText(
 
 ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 	if (isService()) {
+		const_cast<HistoryItem*>(this)->resolveDependent();
+
 		// Don't show small media for service messages (chat photo changed).
 		// Because larger version is shown exactly to the left of the small.
 		//auto media = _media ? _media->toPreview(options) : ItemPreview();
@@ -3385,19 +3437,7 @@ void HistoryItem::createComponents(CreateConfig &&config) {
 
 	if (const auto reply = Get<HistoryMessageReply>()) {
 		reply->set(std::move(config.reply));
-		if (!reply->updateData(this)) {
-			if (const auto messageId = reply->messageId()) {
-				RequestDependentMessageItem(
-					this,
-					reply->externalPeerId(),
-					reply->messageId());
-			} else if (reply->storyId()) {
-				RequestDependentMessageStory(
-					this,
-					reply->externalPeerId(),
-					reply->storyId());
-			}
-		}
+		reply->updateData(this);
 	}
 	if (const auto via = Get<HistoryMessageVia>()) {
 		via->create(&_history->owner(), config.viaBotId);
@@ -3970,14 +4010,7 @@ void HistoryItem::createServiceFromMtp(const MTPDmessageService &message) {
 					dependent->topId = data.vreply_to_top_id().value_or(id);
 					dependent->topicPost = data.is_forum_topic()
 						|| Has<HistoryServiceTopicInfo>();
-					if (!updateServiceDependent()) {
-						RequestDependentMessageItem(
-							this,
-							(dependent->peerId
-								? dependent->peerId
-								: _history->peer->id),
-							dependent->msgId);
-					}
+					updateServiceDependent();
 				}
 			}
 		}, [](const MTPDmessageReplyStoryHeader &data) {

@@ -910,7 +910,7 @@ bool Photo::needInfoDisplay() const {
 		return false;
 	}
 
-	if (_parent->data()->isFakeBotAbout()) {
+	if (_parent->data()->isFakeAboutView()) {
 		return false;
 	}
 	return _parent->data()->isSending()

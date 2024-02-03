@@ -158,7 +158,7 @@ TopBarWidget::TopBarWidget(
 
 	rpl::combine(
 		_controller->activeChatValue(),
-		_controller->searchInChat.value()
+		_controller->searchInChatValue()
 	) | rpl::combine_previous(
 		std::make_tuple(Dialogs::Key(), Dialogs::Key())
 	) | rpl::map([](
@@ -1646,7 +1646,7 @@ void TopBarWidget::updateOnlineDisplay() {
 			auto online = 0;
 			auto onlyMe = true;
 			for (const auto &user : chat->participants) {
-				if (user->onlineTill > now) {
+				if (user->lastseen().isOnline(now)) {
 					++online;
 					if (onlyMe && user != self) onlyMe = false;
 				}
@@ -1674,7 +1674,7 @@ void TopBarWidget::updateOnlineDisplay() {
 			auto online = 0;
 			auto onlyMe = true;
 			for (auto &participant : std::as_const(channel->mgInfo->lastParticipants)) {
-				if (participant->onlineTill > now) {
+				if (participant->lastseen().isOnline(now)) {
 					++online;
 					if (onlyMe && participant != self) {
 						onlyMe = false;
