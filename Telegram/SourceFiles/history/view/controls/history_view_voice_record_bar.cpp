@@ -44,7 +44,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "boxes/abstract_box.h"
-#include "window/window_controller.h"
+
 
 namespace HistoryView::Controls {
 namespace {
@@ -1805,16 +1805,18 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 			};
 
 			auto settings = &AyuSettings::getInstance();
-			auto sendVoiceCallback = crl::guard(this, [=, this](Fn<void()> &&close)
-			{
-				_sendVoiceRequests.fire({
-					_data.bytes,
-					_data.waveform,
-					Duration(_data.samples),
-					options,
+			auto sendVoiceCallback = crl::guard(
+				this,
+				[=, this](Fn<void()> &&close)
+				{
+					_sendVoiceRequests.fire({
+						_data.bytes,
+						_data.waveform,
+						Duration(_data.samples),
+						options,
+					});
+					close();
 				});
-				close();
-			});
 
 			if (settings->voiceConfirmation) {
 				_show->showBox(Ui::MakeConfirmBox(
@@ -1823,9 +1825,10 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 						.confirmed = std::move(sendVoiceCallback),
 						.confirmText = tr::lng_send_button()
 					}));
-			}
-			else {
-				sendVoiceCallback([]{});
+			} else {
+				sendVoiceCallback([]
+				{
+				});
 			}
 		}));
 	}
@@ -1890,16 +1893,18 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 		}
 
 		auto settings = &AyuSettings::getInstance();
-		auto sendVoiceCallback = crl::guard(this, [=, this](Fn<void()> &&close)
-		{
-			_sendVoiceRequests.fire({
-				_data.bytes,
-				_data.waveform,
-				Duration(_data.samples),
-				options,
+		auto sendVoiceCallback = crl::guard(
+			this,
+			[=, this](Fn<void()> &&close)
+			{
+				_sendVoiceRequests.fire({
+					_data.bytes,
+					_data.waveform,
+					Duration(_data.samples),
+					options,
+				});
+				close();
 			});
-			close();
-		});
 
 		if (settings->voiceConfirmation) {
 			_show->showBox(Ui::MakeConfirmBox(
@@ -1908,9 +1913,10 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 					.confirmed = std::move(sendVoiceCallback),
 					.confirmText = tr::lng_send_button()
 				}));
-		}
-		else {
-			sendVoiceCallback([]{});
+		} else {
+			sendVoiceCallback([]
+			{
+			});
 		}
 	}
 }

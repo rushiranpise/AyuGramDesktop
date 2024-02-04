@@ -79,10 +79,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/abstract_box.h"
 #include "ayu/features/streamer_mode/streamer_mode.h"
 #include "styles/style_ayu_icons.h"
-#include "tray.h"
 #include "lang_auto.h"
-
-// AyuGram includes
 #include "ayu/ui/settings/settings_ayu.h"
 
 
@@ -926,15 +923,15 @@ void MainMenu::setupMenu() {
 				tr::ayu_LReadMessages(),
 				{&st::ayuLReadMenuIcon}
 			)->setClickedCallback([=]
-								  {
-									  auto prev = settings->sendReadMessages;
-									  settings->set_sendReadMessages(false);
+			{
+				auto prev = settings->sendReadMessages;
+				settings->set_sendReadMessages(false);
 
-									  auto chats = controller->session().data().chatsList();
-									  MarkAsReadChatList(chats);
+				auto chats = controller->session().data().chatsList();
+				MarkAsReadChatList(chats);
 
-									  settings->set_sendReadMessages(prev);
-								  });
+				settings->set_sendReadMessages(prev);
+			});
 		}
 
 		if (settings->showSReadToggleInDrawer) {
@@ -942,10 +939,10 @@ void MainMenu::setupMenu() {
 				tr::ayu_SReadMessages(),
 				{&st::ayuSReadMenuIcon}
 			)->setClickedCallback([=]
-								  {
-									  auto box = Box<AyuUi::ServerReadConfirmationBox>(controller);
-									  Ui::show(std::move(box));
-								  });
+			{
+				auto box = Box<AyuUi::ServerReadConfirmationBox>(controller);
+				Ui::show(std::move(box));
+			});
 		}
 	} else {
 		addAction(
@@ -1016,12 +1013,13 @@ void MainMenu::setupMenu() {
 		)->toggleOn(AyuSettings::get_ghostModeEnabledReactive());
 
 		_ghostModeToggle->toggledChanges(
-		) | rpl::start_with_next([=](bool ghostMode)
-								 {
-									 settings->set_ghostModeEnabled(ghostMode);
-
-									 AyuSettings::save();
-								 }, _ghostModeToggle->lifetime());
+		) | rpl::start_with_next(
+			[=](bool ghostMode)
+			{
+				settings->set_ghostModeEnabled(ghostMode);
+				AyuSettings::save();
+			},
+			_ghostModeToggle->lifetime());
 	}
 
 	if (settings->showStreamerToggleInDrawer) {
@@ -1031,15 +1029,16 @@ void MainMenu::setupMenu() {
 		)->toggleOn(rpl::single(AyuFeatures::StreamerMode::isEnabled()));
 
 		_streamerModeToggle->toggledChanges(
-		) | rpl::start_with_next([=](bool enabled)
-								 {
-									 if (enabled) {
-										 AyuFeatures::StreamerMode::enable();
-									 }
-									 else {
-										 AyuFeatures::StreamerMode::disable();
-									 }
-								 }, _streamerModeToggle->lifetime());
+		) | rpl::start_with_next(
+			[=](bool enabled)
+			{
+				if (enabled) {
+					AyuFeatures::StreamerMode::enable();
+				} else {
+					AyuFeatures::StreamerMode::disable();
+				}
+			},
+			_streamerModeToggle->lifetime());
 	}
 
 	Core::App().settings().systemDarkModeValue(

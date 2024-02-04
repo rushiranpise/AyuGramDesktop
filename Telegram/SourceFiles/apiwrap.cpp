@@ -3567,8 +3567,7 @@ void ApiWrap::sendUploadedPhoto(
 	if (const auto item = _session->data().message(localId)) {
 		// AyuGram useScheduledMessages
 		const auto settings = &AyuSettings::getInstance();
-		if (settings->useScheduledMessages && !options.scheduled)
-		{
+		if (settings->useScheduledMessages && !options.scheduled) {
 			DEBUG_LOG(("[AyuGram] Scheduling message"));
 			auto current = base::unixtime::now();
 			options.scheduled = current + 18; // using 18 seconds because photo can be big
@@ -3594,8 +3593,7 @@ void ApiWrap::sendUploadedDocument(
 
 		// AyuGram useScheduledMessages
 		const auto settings = &AyuSettings::getInstance();
-		if (settings->useScheduledMessages && !options.scheduled)
-		{
+		if (settings->useScheduledMessages && !options.scheduled) {
 			DEBUG_LOG(("[AyuGram] Scheduling message"));
 			auto current = base::unixtime::now();
 			options.scheduled = current + 60; // well, a document can be really big...
@@ -4078,8 +4076,7 @@ void ApiWrap::sendMediaWithRandomId(
 		Fn<void(bool)> done) {
 	// AyuGram useScheduledMessages
 	const auto settings = &AyuSettings::getInstance();
-	if (settings->useScheduledMessages && !options.scheduled)
-	{
+	if (settings->useScheduledMessages && !options.scheduled) {
 		DEBUG_LOG(("[AyuGram] Scheduling message"));
 		auto current = base::unixtime::now();
 		options.scheduled = current + 12;
@@ -4180,8 +4177,7 @@ void ApiWrap::sendAlbumIfReady(not_null<SendingAlbum*> album) {
 
 	// AyuGram useScheduledMessages
 	const auto settings = &AyuSettings::getInstance();
-	if (settings->useScheduledMessages && !album->options.scheduled)
-	{
+	if (settings->useScheduledMessages && !album->options.scheduled) {
 		DEBUG_LOG(("[AyuGram] Scheduling message"));
 		auto current = base::unixtime::now();
 		album->options.scheduled = current + 12;

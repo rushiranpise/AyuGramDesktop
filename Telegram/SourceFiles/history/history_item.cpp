@@ -384,20 +384,38 @@ HistoryItem::HistoryItem(
 		if (media) {
 			setMedia(*media);
 			if (checked == MediaCheckResult::HasUnsupportedTimeToLive) {
-				media->match([&](const MTPDmessageMediaPhoto &media) {
-					auto time = media.vttl_seconds()->v;
-					setAyuHint(formatTTL(time));
-				}, [&](const MTPDmessageMediaDocument &media) {
-					auto time = media.vttl_seconds()->v;
-					setAyuHint(formatTTL(time));
-				}, [&](const MTPDmessageMediaWebPage &media) {
-				}, [&](const MTPDmessageMediaGame &media) {
-				}, [&](const MTPDmessageMediaInvoice &media) {
-				}, [&](const MTPDmessageMediaPoll &media) {
-				}, [&](const MTPDmessageMediaDice &media) {
-				}, [&](const MTPDmessageMediaStory &media) {
-				}, [&](const auto &) {
-				});
+				media->match(
+					[&](const MTPDmessageMediaPhoto &media)
+					{
+						auto time = media.vttl_seconds()->v;
+						setAyuHint(formatTTL(time));
+					},
+					[&](const MTPDmessageMediaDocument &media)
+					{
+						auto time = media.vttl_seconds()->v;
+						setAyuHint(formatTTL(time));
+					},
+					[&](const MTPDmessageMediaWebPage &media)
+					{
+					},
+					[&](const MTPDmessageMediaGame &media)
+					{
+					},
+					[&](const MTPDmessageMediaInvoice &media)
+					{
+					},
+					[&](const MTPDmessageMediaPoll &media)
+					{
+					},
+					[&](const MTPDmessageMediaDice &media)
+					{
+					},
+					[&](const MTPDmessageMediaStory &media)
+					{
+					},
+					[&](const auto &)
+					{
+					});
 			}
 		}
 		auto textWithEntities = TextWithEntities{
@@ -1212,8 +1230,9 @@ void HistoryItem::setServiceText(PreparedServiceText &&prepared) {
 	const auto settings = &AyuSettings::getInstance();
 	const auto timeString = QString(" (%1)").arg(QLocale().toString(
 		base::unixtime::parse(_date),
-		settings->showMessageSeconds ? QLocale::system().timeFormat(QLocale::LongFormat).remove(" t")
-									 : QLocale::system().timeFormat(QLocale::ShortFormat)
+		settings->showMessageSeconds
+			? QLocale::system().timeFormat(QLocale::LongFormat).remove(" t")
+			: QLocale::system().timeFormat(QLocale::ShortFormat)
 	));
 	if (!text.text.isEmpty() && !text.text.contains(timeString)) {
 		text = text.append(timeString);
@@ -2744,13 +2763,11 @@ void HistoryItem::setPostAuthor(const QString &postAuthor) {
 	msgsigned->postAuthor = postAuthor;
 	msgsigned->isAnonymousRank = !isDiscussionPost()
 		&& this->author()->isMegagroup();
-
 	history()->owner().requestItemResize(this);
 }
 
 void HistoryItem::setAyuHint(const QString &hint) {
 	try {
-		const auto settings = &AyuSettings::getInstance();
 		if (!(_flags & MessageFlag::HasPostAuthor)) {
 			_flags |= MessageFlag::HasPostAuthor;
 		}
@@ -2769,15 +2786,13 @@ void HistoryItem::setAyuHint(const QString &hint) {
 			if (!msgsigned) {
 				AddComponents(HistoryMessageSigned::Bit());
 				msgsigned = Get<HistoryMessageSigned>();
-			}
-			else if (msgsigned->postAuthor == hint) {
+			} else if (msgsigned->postAuthor == hint) {
 				return;
 			}
 			msgsigned->postAuthor = hint;
 			msgsigned->isAnonymousRank = !isDiscussionPost()
 				&& this->author()->isMegagroup();
-		}
-		else {
+		} else {
 			const auto data = Get<HistoryServiceData>();
 			auto prepared = PreparedServiceText{
 				.text = _text.append(QString(" (%1)").arg(hint)),

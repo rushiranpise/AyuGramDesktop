@@ -1106,8 +1106,7 @@ void Stories::markAsRead(FullStoryId id, bool viewed) {
 	// AyuGram sendReadStories
 	const auto settings = &AyuSettings::getInstance();
 
-	if (!settings->sendReadStories)
-	{
+	if (!settings->sendReadStories) {
 		_markReadRequests.clear();
 		_markReadPending.clear();
 
@@ -1265,8 +1264,7 @@ void Stories::sendMarkAsReadRequest(
 	// AyuGram sendReadStories
 	const auto settings = &AyuSettings::getInstance();
 
-	if (!settings->sendReadStories)
-	{
+	if (!settings->sendReadStories) {
 		_markReadRequests.clear();
 		_markReadPending.clear();
 
@@ -1326,8 +1324,7 @@ void Stories::sendIncrementViewsRequests() {
 
 	// AyuGram sendReadStories
 	const auto settings = &AyuSettings::getInstance();
-	if (!settings->sendReadStories)
-	{
+	if (!settings->sendReadStories) {
 		_incrementViewsPending.clear();
 		_incrementViewsRequests.clear();
 		return;
@@ -1847,8 +1844,7 @@ bool Stories::isQuitPrevent() {
 		// AyuGram sendReadStories
 		const auto settings = &AyuSettings::getInstance();
 
-		if (settings->sendReadStories)
-		{
+		if (settings->sendReadStories) {
 			sendMarkAsReadRequests();
 		}
 	}
