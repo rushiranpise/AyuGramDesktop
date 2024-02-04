@@ -713,7 +713,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	const auto skipDrawingSurrounding = context.skipDrawingParts
 		== PaintContext::SkipDrawingParts::Surrounding;
 
-	if (!unwrapped && !skipDrawingSurrounding) {
+	if (!unwrapped && !skipDrawingSurrounding && !AyuFeatures::MessageShot::ignoreRender(AyuFeatures::MessageShot::RenderPart::Date)) {
 		if (!isRound || !inWebPage) {
 			drawCornerStatus(p, context, QPoint());
 		}

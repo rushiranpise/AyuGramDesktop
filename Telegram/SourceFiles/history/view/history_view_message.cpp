@@ -1274,6 +1274,10 @@ void Message::paintCommentsButton(
 		Painter &p,
 		QRect &g,
 		const PaintContext &context) const {
+	if (AyuFeatures::MessageShot::isTakingShot()) {
+		return;
+	}
+
 	if (!data()->repliesAreComments() && !data()->externalReply()) {
 		return;
 	}
@@ -4056,7 +4060,9 @@ int Message::resizeContentGetHeight(int newWidth) {
 		}
 
 		if (item->repliesAreComments() || item->externalReply()) {
-			newHeight += st::historyCommentsButtonHeight;
+			if (!AyuFeatures::MessageShot::isTakingShot()) {
+				newHeight += st::historyCommentsButtonHeight;
+			}
 		} else if (_comments) {
 			_comments = nullptr;
 			checkHeavyPart();
