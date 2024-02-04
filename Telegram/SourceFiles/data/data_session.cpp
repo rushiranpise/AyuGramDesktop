@@ -2309,11 +2309,12 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 
 	// AyuGram saveMessagesHistory
 	const auto settings = &AyuSettings::getInstance();
+	HistoryMessageEdition edit;
 
 	if (data.type() != mtpc_message) {
 		goto proceed;
 	}
-	HistoryMessageEdition edit = HistoryMessageEdition(_session, data.c_message());
+	edit = HistoryMessageEdition(_session, data.c_message());
 	if (settings->saveMessagesHistory && !existing->isLocal() && !existing->author()->isSelf() && !edit.isEditHide) {
 		const auto msg = existing->originalText();
 
