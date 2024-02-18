@@ -536,11 +536,9 @@ void Widget::chosenRow(const ChosenRow &row) {
 		&& row.userpicClick
 		&& (row.message.fullId.msg == ShowAtUnreadMsgId)
 		&& history->peer->hasActiveStories()
-		&& !history->peer->isSelf()) {
-		const auto settings = &AyuSettings::getInstance();
-		if (!settings->disableStories) {
-			controller()->openPeerStories(history->peer->id);
-		}
+		&& !history->peer->isSelf()
+		&& !AyuSettings::getInstance().disableStories) {
+		controller()->openPeerStories(history->peer->id);
 		return;
 	} else if (history
 		&& history->isForum()
