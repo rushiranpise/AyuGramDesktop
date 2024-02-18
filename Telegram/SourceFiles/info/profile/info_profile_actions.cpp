@@ -81,6 +81,7 @@ base::options::toggle ShowPeerIdBelowAbout({
 	.id = kOptionShowPeerIdBelowAbout,
 	.name = "Show Peer IDs in Profile",
 	.description = "Show peer IDs from API below their Bio / Description.",
+	.scope = static_cast<base::options::details::ScopeFlag>(0),
 });
 
 [[nodiscard]] rpl::producer<TextWithEntities> UsernamesSubtext(
