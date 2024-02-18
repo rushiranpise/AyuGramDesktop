@@ -1790,7 +1790,8 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 				removeSet(sets[button->section].id);
 			}
 		} else if (std::get_if<OverGroupAdd>(&pressed)) {
-			_show->showBox(Box<StickersBox>(_show, _megagroupSet));
+			const auto isEmoji = false;
+			_show->showBox(Box<StickersBox>(_show, _megagroupSet, isEmoji));
 		}
 	}
 }
@@ -2642,7 +2643,8 @@ void StickersListWidget::setupSearch() {
 void StickersListWidget::displaySet(uint64 setId) {
 	if (setId == Data::Stickers::MegagroupSetId) {
 		if (_megagroupSet->canEditStickers()) {
-			checkHideWithBox(Box<StickersBox>(_show, _megagroupSet));
+			const auto isEmoji = false;
+			checkHideWithBox(Box<StickersBox>(_show, _megagroupSet, isEmoji));
 			return;
 		} else if (_megagroupSet->mgInfo->stickerSet.id) {
 			setId = _megagroupSet->mgInfo->stickerSet.id;

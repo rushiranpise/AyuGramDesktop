@@ -533,6 +533,16 @@ void Widget::chosenRow(const ChosenRow &row) {
 			row.message.fullId.msg,
 			Window::SectionShow::Way::ClearStack);
 	} else if (history
+		&& row.userpicClick
+		&& (row.message.fullId.msg == ShowAtUnreadMsgId)
+		&& history->peer->hasActiveStories()
+		&& !history->peer->isSelf()) {
+		const auto settings = &AyuSettings::getInstance();
+		if (!settings->disableStories) {
+			controller()->openPeerStories(history->peer->id);
+		}
+		return;
+	} else if (history
 		&& history->isForum()
 		&& !row.message.fullId
 		&& (!controller()->adaptive().isOneColumn()
@@ -561,17 +571,7 @@ void Widget::chosenRow(const ChosenRow &row) {
 		}
 		return;
 	} else if (history) {
-		const auto settings = &AyuSettings::getInstance();
 		const auto peer = history->peer;
-		if (row.message.fullId.msg == ShowAtUnreadMsgId) {
-			if (row.userpicClick
-				&& peer->hasActiveStories()
-				&& !peer->isSelf()
-				&& !settings->disableStories) {
-				controller()->openPeerStories(peer->id);
-				return;
-			}
-		}
 		const auto showAtMsgId = controller()->uniqueChatsInSearchResults()
 			? ShowAtUnreadMsgId
 			: row.message.fullId.msg;

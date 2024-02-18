@@ -21,6 +21,7 @@ struct HistoryMessageMarkupData;
 struct HistoryMessageReplyMarkup;
 struct HistoryMessageTranslation;
 struct HistoryMessageForwarded;
+struct HistoryMessageSavedMediaData;
 struct HistoryServiceDependentData;
 enum class HistorySelfDestructType;
 struct PreparedServiceText;
@@ -537,15 +538,14 @@ public:
 		return _ttlDestroyAt;
 	}
 
+	[[nodiscard]] int boostsApplied() const {
+		return _boostsApplied;
+	}
+
 	MsgId id;
 
 private:
 	struct CreateConfig;
-
-	struct SavedMediaData {
-		TextWithEntities text;
-		std::unique_ptr<Data::Media> media;
-	};
 
 	HistoryItem(
 		not_null<History*> history,
@@ -656,13 +656,13 @@ private:
 
 	TextWithEntities _text;
 
-	std::unique_ptr<SavedMediaData> _savedLocalEditMediaData;
 	std::unique_ptr<Data::Media> _media;
 	std::unique_ptr<Data::MessageReactions> _reactions;
 	crl::time _reactionsLastRefreshed = 0;
 
 	TimeId _date = 0;
 	TimeId _ttlDestroyAt = 0;
+	int _boostsApplied = 0;
 
 	HistoryView::Element *_mainView = nullptr;
 	MessageGroupId _groupId = MessageGroupId();
@@ -673,3 +673,5 @@ private:
 	friend class HistoryView::ServiceMessagePainter;
 
 };
+
+constexpr auto kSize = int(sizeof(HistoryItem));

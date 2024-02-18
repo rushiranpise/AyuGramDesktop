@@ -271,11 +271,13 @@ inline auto DefaultRestrictionValue(
 			AdminRightValue(
 				channel,
 				ChatAdminRight::PostMessages),
+			channel->unrestrictedByBoostsValue(),
 			RestrictionsValue(channel, rights),
 			DefaultRestrictionsValue(channel, rights),
 			[=](
 					ChannelDataFlags flags,
 					bool postMessagesRight,
+					bool unrestrictedByBoosts,
 					ChatRestrictions sendRestriction,
 					ChatRestrictions defaultSendRestriction) {
 				const auto notAmInFlags = Flag::Left | Flag::Forbidden;
@@ -285,7 +287,7 @@ inline auto DefaultRestrictionValue(
 					|| ((flags & Flag::HasLink)
 						&& !(flags & Flag::JoinToWrite));
 				const auto restricted = sendRestriction
-					| defaultSendRestriction;
+					| (defaultSendRestriction && !unrestrictedByBoosts);
 				return allowed
 					&& !forumRestriction
 					&& (postMessagesRight
