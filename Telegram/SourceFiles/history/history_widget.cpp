@@ -3273,6 +3273,7 @@ void HistoryWidget::messagesReceived(
 		not_null<PeerData*> peer,
 		const MTPmessages_Messages &messages,
 		int requestId) {
+	// Expects(_history != nullptr);
 	if (!_history) {
 		return; // AyuGram: fix crash when using `saveDeletedMessages`
 	}
