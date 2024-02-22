@@ -32,6 +32,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <rpl/range.h>
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
+
 namespace Window {
 namespace {
 
@@ -471,6 +475,12 @@ auto ChatThemeValueFromPeer(
 		peer
 	) | rpl::map([=](ResolvedTheme resolved)
 	-> rpl::producer<std::shared_ptr<Ui::ChatTheme>> {
+		const auto settings = &AyuSettings::getInstance();
+		// this check ensures that background is not a pattern wallpaper in a private chat
+		if (settings->disableCustomBackgrounds && resolved.paper && resolved.paper->media) {
+			resolved.paper = std::nullopt;
+		}
+
 		if (!resolved.theme && !resolved.paper) {
 			return rpl::single(controller->defaultChatTheme());
 		}
