@@ -697,7 +697,7 @@ bool Call::handleUpdate(const MTPPhoneCall &call) {
 				)).send();
 			}
 		}
-		if (data.is_need_rating() && _id && _accessHash) {
+		if (false && data.is_need_rating() && _id && _accessHash) { // AyuGram: rate call box removed
 			const auto session = &_user->session();
 			const auto callId = _id;
 			const auto callAccessHash = _accessHash;

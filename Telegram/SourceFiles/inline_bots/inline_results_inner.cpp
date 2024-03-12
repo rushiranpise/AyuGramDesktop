@@ -629,7 +629,7 @@ void Inner::updateSelected() {
 		Ui::Tooltip::Hide();
 	}
 	if (link) {
-		Ui::Tooltip::Show(1000, this);
+		Ui::Tooltip::Show(350, this);
 	}
 }
 

@@ -21,7 +21,7 @@ namespace {
 
 constexpr auto kSharedMediaLimit = 100;
 constexpr auto kFirstSharedMediaLimit = 0;
-constexpr auto kDefaultSearchTimeoutMs = crl::time(200);
+constexpr auto kDefaultSearchTimeoutMs = crl::time(70);
 
 } // namespace
 

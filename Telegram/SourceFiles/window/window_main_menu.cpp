@@ -86,7 +86,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Window {
 namespace {
 
-constexpr auto kPlayStatusLimit = 2;
+constexpr auto kPlayStatusLimit = 12;
 
 class VersionLabel final
 	: public Ui::FlatLabel
@@ -99,7 +99,7 @@ public:
 			bool active) override {
 		update();
 		if (active && action && !action->dragText().isEmpty()) {
-			Ui::Tooltip::Show(1000, this);
+			Ui::Tooltip::Show(350, this);
 		} else {
 			Ui::Tooltip::Hide();
 		}
