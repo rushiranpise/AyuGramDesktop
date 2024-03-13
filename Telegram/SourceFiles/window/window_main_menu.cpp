@@ -1096,7 +1096,7 @@ void MainMenu::chooseEmojiStatus() {
 	if (const auto widget = _badge->widget()) {
 		_emojiStatusPanel->show(_controller, widget, _badge->sizeTag());
 	} else {
-		ShowPremiumPreviewBox(_controller, PremiumPreview::EmojiStatus);
+		ShowPremiumPreviewBox(_controller, PremiumFeature::EmojiStatus);
 	}
 }
 

@@ -539,7 +539,7 @@ bool ShowReactPremiumError(
 		if (controller->session().premium()) {
 			return false;
 		}
-		ShowPremiumPreviewBox(controller, PremiumPreview::TagsForMessages);
+		ShowPremiumPreviewBox(controller, PremiumFeature::TagsForMessages);
 		return true;
 	} else if (controller->session().premium()
 		|| ranges::contains(item->chosenReactions(), id)
@@ -548,7 +548,7 @@ bool ShowReactPremiumError(
 	} else if (!id.custom()) {
 		return false;
 	}
-	ShowPremiumPreviewBox(controller, PremiumPreview::InfiniteReactions);
+	ShowPremiumPreviewBox(controller, PremiumFeature::InfiniteReactions);
 	return true;
 }
 

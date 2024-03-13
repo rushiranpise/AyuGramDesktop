@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_config.h"
 #include "mtproto/mtproto_dc_options.h"
+#include "data/business/data_shortcut_messages.h"
 #include "data/notify/data_notify_settings.h"
 #include "data/stickers/data_stickers.h"
 #include "data/data_saved_messages.h"
@@ -1141,7 +1142,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPlong(),
 				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
-				MTP_int(d.vttl_period().value_or_empty())),
+				MTP_int(d.vttl_period().value_or_empty()),
+				MTPint()), // quick_reply_shortcut_id
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -1174,7 +1176,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPlong(),
 				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
-				MTP_int(d.vttl_period().value_or_empty())),
+				MTP_int(d.vttl_period().value_or_empty()),
+				MTPint()), // quick_reply_shortcut_id
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -1565,6 +1568,8 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			if (const auto local = owner.message(id)) {
 				if (local->isScheduled()) {
 					session().data().scheduledMessages().apply(d, local);
+				} else if (local->isBusinessShortcut()) {
+					session().data().shortcutMessages().apply(d, local);
 				} else {
 					const auto existing = session().data().message(
 						id.peer,
@@ -1778,6 +1783,31 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	case mtpc_updateDeleteScheduledMessages: {
 		const auto &d = update.c_updateDeleteScheduledMessages();
 		session().data().scheduledMessages().apply(d);
+	} break;
+
+	case mtpc_updateQuickReplies: {
+		const auto &d = update.c_updateQuickReplies();
+		session().data().shortcutMessages().apply(d);
+	} break;
+
+	case mtpc_updateNewQuickReply: {
+		const auto &d = update.c_updateNewQuickReply();
+		session().data().shortcutMessages().apply(d);
+	} break;
+
+	case mtpc_updateDeleteQuickReply: {
+		const auto &d = update.c_updateDeleteQuickReply();
+		session().data().shortcutMessages().apply(d);
+	} break;
+
+	case mtpc_updateQuickReplyMessage: {
+		const auto &d = update.c_updateQuickReplyMessage();
+		session().data().shortcutMessages().apply(d);
+	} break;
+
+	case mtpc_updateDeleteQuickReplyMessages: {
+		const auto &d = update.c_updateDeleteQuickReplyMessages();
+		session().data().shortcutMessages().apply(d);
 	} break;
 
 	case mtpc_updateWebPage: {
