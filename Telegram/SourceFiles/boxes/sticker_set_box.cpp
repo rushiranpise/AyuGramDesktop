@@ -359,6 +359,7 @@ private:
 	int _perRow = 0;
 	QSize _singleSize;
 	TimeId _setInstallDate = TimeId(0);
+	StickerType _setThumbnailType = StickerType::Webp;
 	ImageWithLocation _setThumbnail;
 
 	const std::unique_ptr<Ui::PathShiftGradient> _pathGradient;
@@ -799,6 +800,8 @@ void StickerSetBox::Inner::gotSet(const MTPmessages_StickerSet &set) {
 							set,
 							thumb);
 						if (result.location.valid()) {
+							_setThumbnailType
+								= Data::ThumbnailTypeFromPhotoSize(thumb);
 							return result;
 						}
 					}
@@ -819,7 +822,7 @@ void StickerSetBox::Inner::gotSet(const MTPmessages_StickerSet &set) {
 				set->installDate = _setInstallDate;
 				set->stickers = _pack;
 				set->emoji = _emoji;
-				set->setThumbnail(_setThumbnail);
+				set->setThumbnail(_setThumbnail, _setThumbnailType);
 			}
 		});
 	}, [&](const MTPDmessages_stickerSetNotModified &data) {
@@ -899,7 +902,7 @@ void StickerSetBox::Inner::installDone(
 	}
 	const auto set = it->second.get();
 	set->thumbnailDocumentId = _setThumbnailDocumentId;
-	set->setThumbnail(_setThumbnail);
+	set->setThumbnail(_setThumbnail, _setThumbnailType);
 	set->stickers = _pack;
 	set->emoji = _emoji;
 
@@ -1265,7 +1268,7 @@ void StickerSetBox::Inner::setupLottie(int index) {
 		getLottiePlayer(),
 		element.documentMedia.get(),
 		ChatHelpers::StickerLottieSize::StickerSet,
-		boundingBoxSize() * cIntRetinaFactor());
+		boundingBoxSize() * style::DevicePixelRatio());
 }
 
 void StickerSetBox::Inner::setupWebm(int index) {
@@ -1389,7 +1392,7 @@ void StickerSetBox::Inner::paintSticker(
 	} else if (element.lottie && element.lottie->ready()) {
 		lottieFrame = element.lottie->frame();
 		p.drawImage(
-			QRect(ppos, lottieFrame.size() / cIntRetinaFactor()),
+			QRect(ppos, lottieFrame.size() / style::DevicePixelRatio()),
 			lottieFrame);
 
 		_lottiePlayer->unpause(element.lottie);

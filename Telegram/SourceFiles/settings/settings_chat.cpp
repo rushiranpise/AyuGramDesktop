@@ -484,7 +484,7 @@ void BackgroundRow::paintEvent(QPaintEvent *e) {
 			const auto &pix = backThumb->pix(
 				st::settingsBackgroundThumb,
 				{ .options = Images::Option::Blur });
-			const auto factor = cIntRetinaFactor();
+			const auto factor = style::DevicePixelRatio();
 			p.drawPixmap(
 				0,
 				0,
@@ -591,7 +591,7 @@ void BackgroundRow::radialAnimationCallback(crl::time now) {
 
 void BackgroundRow::updateImage() {
 	const auto size = st::settingsBackgroundThumb;
-	const auto fullsize = size * cIntRetinaFactor();
+	const auto fullsize = size * style::DevicePixelRatio();
 
 	const auto &background = *Window::Theme::Background();
 	const auto &paper = background.paper();
@@ -625,7 +625,7 @@ void BackgroundRow::updateImage() {
 		auto result = QImage(
 			QSize{ fullsize, fullsize },
 			QImage::Format_ARGB32_Premultiplied);
-		result.setDevicePixelRatio(cRetinaFactor());
+		result.setDevicePixelRatio(style::DevicePixelRatio());
 		if (const auto color = background.colorForFill()) {
 			result.fill(*color);
 			return result;
@@ -650,7 +650,7 @@ void BackgroundRow::updateImage() {
 		: prepareNormal();
 	_background = Ui::PixmapFromImage(
 		Images::Round(std::move(back), ImageRoundRadius::Small));
-	_background.setDevicePixelRatio(cRetinaFactor());
+	_background.setDevicePixelRatio(style::DevicePixelRatio());
 
 	rtlupdate(radialRect());
 
