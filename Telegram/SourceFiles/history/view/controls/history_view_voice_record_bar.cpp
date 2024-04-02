@@ -1798,13 +1798,17 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 
 			window()->raise();
 			window()->activateWindow();
-			const auto options = Api::SendOptions{
+			auto options = Api::SendOptions{
 				.ttlSeconds = (ttlBeforeHide
 					? std::numeric_limits<int>::max()
 					: 0),
 			};
 
 			auto settings = &AyuSettings::getInstance();
+			if (settings->useScheduledMessages) {
+				auto current = base::unixtime::now();
+				options.scheduled = current + 12 + 5;
+			}
 			auto sendVoiceCallback = crl::guard(
 				this,
 				[=, this](Fn<void()> &&close)
@@ -1893,6 +1897,10 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 		}
 
 		auto settings = &AyuSettings::getInstance();
+		if (settings->useScheduledMessages) {
+			auto current = base::unixtime::now();
+			options.scheduled = current + 12 + 5;
+		}
 		auto sendVoiceCallback = crl::guard(
 			this,
 			[=, this](Fn<void()> &&close)
