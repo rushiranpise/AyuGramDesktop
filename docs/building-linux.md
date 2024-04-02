@@ -20,8 +20,7 @@ Go to ***BuildPath*/tdesktop** and run
         tdesktop:centos_env \
         /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
         -D TDESKTOP_API_ID=2040 \
-        -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
-        -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+        -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
 
 Or, to create a debug build, run
 
@@ -31,8 +30,7 @@ Or, to create a debug build, run
         tdesktop:centos_env \
         /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
         -D TDESKTOP_API_ID=2040 \
-        -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
-        -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+        -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
 
 **P. S. If docker image build takes too long, cherry-pick [this](https://github.com/TDesktop-x64/tdesktop/commit/b99c084862053f441caa6525837a7e193cc671f7) commit.**
 
