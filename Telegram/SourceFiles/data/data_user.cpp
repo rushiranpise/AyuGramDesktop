@@ -486,6 +486,10 @@ const std::vector<QString> &UserData::usernames() const {
 	return _username.usernames();
 }
 
+bool UserData::isUsernameEditable(QString username) const {
+	return _username.isEditable(username);
+}
+
 const QString &UserData::phone() const {
 	return _phone;
 }

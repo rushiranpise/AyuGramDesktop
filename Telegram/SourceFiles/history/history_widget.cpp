@@ -4536,7 +4536,7 @@ void HistoryWidget::chooseAttach(
 	}
 
 	const auto filter = (overrideSendImagesAsPhotos == true)
-		? FileDialog::ImagesOrAllFilter()
+		? FileDialog::PhotoVideoFilesFilter()
 		: FileDialog::AllOrImagesFilter();
 
 	FileDialog::GetOpenPaths(this, tr::lng_choose_files(tr::now), filter, crl::guard(this, [=](
@@ -6284,8 +6284,7 @@ void HistoryWidget::startItemRevealAnimations() {
 void HistoryWidget::startMessageSendingAnimation(
 		not_null<HistoryItem*> item) {
 	auto &sendingAnimation = controller()->sendingAnimation();
-	if (!sendingAnimation.hasLocalMessage(item->fullId().msg)
-		|| !sendingAnimation.checkExpectedType(item)) {
+	if (!sendingAnimation.checkExpectedType(item)) {
 		return;
 	}
 	Assert(item->mainView() != nullptr);
@@ -6297,14 +6296,16 @@ void HistoryWidget::startMessageSendingAnimation(
 		geometryValue() | rpl::to_empty,
 		_scroll->geometryValue() | rpl::to_empty,
 		_list->geometryValue() | rpl::to_empty
-	) | rpl::map([=] {
+	) | rpl::map([=]() -> std::optional<QPoint> {
 		const auto view = item->mainView();
+		const auto top = view ? _list->itemTop(view) : -1;
+		if (top < 0) {
+			return std::nullopt;
+		}
 		const auto additional = (_list->height() == _scroll->height())
 			? view->height()
 			: 0;
-		return _list->mapToGlobal(QPoint(
-			0,
-			_list->itemTop(view) - additional));
+		return _list->mapToGlobal(QPoint(0, top - additional));
 	});
 
 	sendingAnimation.startAnimation({

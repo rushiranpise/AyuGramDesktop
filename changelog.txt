@@ -1,3 +1,37 @@
+4.16.6 (09.04.24)
+
+- Show custom emoji preview on long press.
+- Fix resume chat bot button disappearance.
+- Fix GIF files playback. (regression in 4.16.3.beta)
+
+4.16.5 (08.04.24)
+
+- Fix editing privacy for groups and channels invitations.
+- Possible fix for the network unresponsiveness after sleep.
+- Possible fix for wide range of memory allocator crashes on Linux.
+
+4.16.4 (06.04.24)
+
+- Bug fixes and other minor improvements.
+
+4.16.3 beta (05.04.24)
+
+- Improve media upload speed.
+- Update FFmpeg to 6.1.1.
+
+4.16.2 (04.04.24)
+
+- Use IV by default for Telegraph and some Telegram links.
+- Support IV links in bot web-apps.
+- Some bug fixes.
+
+4.16.1 (02.04.24)
+
+- Show information about Fragment phone numbers and usernames.
+- Fix jump to original story from a story repost.
+- Fix old image display in viewer in some cases.
+- Fix several crashes.
+
 4.16 (01.04.24)
 
 - Instant View on Windows 10+ and macOS.

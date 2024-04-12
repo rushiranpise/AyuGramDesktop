@@ -1039,11 +1039,9 @@ void PeerListContent::changeCheckState(
 		not_null<PeerListRow*> row,
 		bool checked,
 		anim::type animated) {
-	row->setChecked(
-		checked,
-		_st.item.checkbox,
-		animated,
-		[=] { updateRow(row); });
+	row->setChecked(checked, _st.item.checkbox, animated, [=] {
+		updateRow(row);
+	});
 }
 
 void PeerListContent::setRowHidden(not_null<PeerListRow*> row, bool hidden) {
@@ -1789,10 +1787,10 @@ crl::time PeerListContent::paintRow(
 	if (row->isSearchResult()
 		&& !_mentionHighlight.isEmpty()
 		&& peer
-		&& peer->userName().startsWith(
+		&& peer->username().startsWith(
 			_mentionHighlight,
 			Qt::CaseInsensitive)) {
-		const auto username = peer->userName();
+		const auto username = peer->username();
 		const auto availableWidth = statusw;
 		auto highlightedPart = '@' + username.mid(0, _mentionHighlight.size());
 		auto grayedPart = username.mid(_mentionHighlight.size());

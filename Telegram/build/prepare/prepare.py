@@ -59,6 +59,9 @@ for arg in sys.argv[1:]:
         options.append(arg)
     elif arg == 'run':
         customRunCommand = True
+    elif arg == 'shell':
+        customRunCommand = True
+        runCommand.append('shell')
 
 buildQt5 = not 'skip-qt5' in options if win else 'build-qt5' in options
 buildQt6 = 'build-qt6' in options if win else not 'skip-qt6' in options
@@ -416,8 +419,15 @@ def runStages():
 
 if customRunCommand:
     os.chdir(executePath)
-    command = ' '.join(runCommand) + '\n'
-    if not run(command):
+    if len(runCommand) == 1 and runCommand[0] == 'shell':
+        print('Preparing interactive mode..')
+        if win:
+            modifiedEnv['PROMPT'] = '(prepare) $P$G'
+            subprocess.run("cmd.exe", shell=True, env=modifiedEnv)
+        else:
+            modifiedEnv['PS1'] = '(prepare) \\w \\$ '
+            subprocess.run("bash --noprofile --norc", env=modifiedEnv)
+    elif not run(command):
         print('FAILED :(')
         finish(1)
     finish(0)
@@ -425,7 +435,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout cc0c2f8365
+    git checkout b35735cd14
 """)
 
 stage('msys64', """
@@ -696,14 +706,17 @@ mac:
     make install
 """)
 
+# Somehow in x86 Debug build dav1d crashes on AV1 10bpc videos.
 stage('dav1d', """
-    git clone -b 1.4.1 --depth 1 https://code.videolan.org/videolan/dav1d.git
+    git clone -b 1.4.1 https://code.videolan.org/videolan/dav1d.git
     cd dav1d
 win:
     if "%X8664%" equ "x64" (
         SET "TARGET=x86_64"
+        SET "DAV1D_ASM_DISABLE="
     ) else (
         SET "TARGET=x86"
+        SET "DAV1D_ASM_DISABLE=-Denable_asm=false"
     )
     set FILE=cross-file.txt
     echo [binaries] > %FILE%
@@ -719,7 +732,7 @@ win:
 
 depends:python/Scripts/activate.bat
     %THIRDPARTY_DIR%\\python\\Scripts\\activate.bat
-    meson setup --cross-file %FILE% --prefix %LIBS_DIR%/local --default-library=static --buildtype=debug -Denable_tools=false -Denable_tests=false -Db_vscrt=mtd builddir-debug
+    meson setup --cross-file %FILE% --prefix %LIBS_DIR%/local --default-library=static --buildtype=debug -Denable_tools=false -Denable_tests=false %DAV1D_ASM_DISABLE% -Db_vscrt=mtd builddir-debug
     meson compile -C builddir-debug
     meson install -C builddir-debug
 release:
@@ -775,7 +788,7 @@ mac:
 """)
 
 stage('libavif', """
-    git clone -b v1.0.4 --depth 1 https://github.com/AOMediaCodec/libavif.git
+    git clone -b v1.0.4 https://github.com/AOMediaCodec/libavif.git
     cd libavif
 win:
     cmake . ^
@@ -805,7 +818,7 @@ mac:
 """)
 
 stage('libde265', """
-    git clone --depth 1 -b v1.0.15 https://github.com/strukturag/libde265.git
+    git clone -b v1.0.15 https://github.com/strukturag/libde265.git
     cd libde265
 win:
     cmake . ^
@@ -881,7 +894,7 @@ mac:
 """)
 
 stage('libheif', """
-    git clone --depth 1 -b v1.17.6 https://github.com/strukturag/libheif.git
+    git clone -b v1.17.6 https://github.com/strukturag/libheif.git
     cd libheif
 win:
     %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/LIBHEIF_EXPORTS/LIBDE265_STATIC_BUILD/g' libheif/CMakeLists.txt
@@ -933,7 +946,7 @@ mac:
 """)
 
 stage('libjxl', """
-    git clone -b v0.8.2 --depth 1 --recursive --shallow-submodules https://github.com/libjxl/libjxl.git
+    git clone -b v0.8.2 --recursive --shallow-submodules https://github.com/libjxl/libjxl.git
     cd libjxl
 """ + setVar("cmake_defines", """
     -DBUILD_SHARED_LIBS=OFF
@@ -1052,9 +1065,7 @@ depends:yasm/yasm
 
 stage('nv-codec-headers', """
 win:
-    git clone https://github.com/FFmpeg/nv-codec-headers.git
-    cd nv-codec-headers
-    git checkout n11.1.5.1
+    git clone -b n12.1.14.0 https://github.com/FFmpeg/nv-codec-headers.git
 """)
 
 stage('regex', """
@@ -1062,9 +1073,8 @@ stage('regex', """
 """)
 
 stage('ffmpeg', """
-    git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
+    git clone -b n6.1.1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
     cd ffmpeg
-    git checkout 7268323193
 win:
     SET PATH_BACKUP_=%PATH%
     SET PATH=%ROOT_DIR%\\ThirdParty\\msys64\\usr\\bin;%PATH%
@@ -1095,6 +1105,7 @@ depends:yasm/yasm
         --disable-network \
         --disable-everything \
         --enable-protocol=file \
+        --enable-libdav1d \
         --enable-libopus \
         --enable-libvpx \
         --enable-hwaccel=h264_videotoolbox \
@@ -1116,6 +1127,7 @@ depends:yasm/yasm
         --enable-decoder=gif \
         --enable-decoder=h264 \
         --enable-decoder=hevc \
+        --enable-decoder=libdav1d \
         --enable-decoder=libvpx_vp8 \
         --enable-decoder=libvpx_vp9 \
         --enable-decoder=mp1 \
@@ -1176,6 +1188,7 @@ depends:yasm/yasm
         --enable-parser=aac \
         --enable-parser=aac_latm \
         --enable-parser=flac \
+        --enable-parser=gif \
         --enable-parser=h264 \
         --enable-parser=hevc \
         --enable-parser=mpeg4video \

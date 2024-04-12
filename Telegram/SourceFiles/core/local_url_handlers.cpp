@@ -567,6 +567,7 @@ bool ResolveUsernameOrPhone(
 		.phone = phone,
 		.messageId = post,
 		.storyId = storyId,
+		.text = params.value(u"text"_q),
 		.repliesInfo = commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
@@ -898,6 +899,34 @@ bool ShowEditPersonalChannel(
 	controller->show(Box<PeerListBox>(
 		std::move(listController),
 		std::move(initBox)));
+	return true;
+}
+
+bool ShowCollectiblePhone(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	const auto phone = match->captured(1);
+	const auto peerId = PeerId(match->captured(2).toULongLong());
+	controller->resolveCollectible(
+		peerId,
+		phone.startsWith('+') ? phone : '+' + phone);
+	return true;
+}
+
+bool ShowCollectibleUsername(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	const auto username = match->captured(1);
+	const auto peerId = PeerId(match->captured(2).toULongLong());
+	controller->resolveCollectible(peerId, username);
 	return true;
 }
 
@@ -1310,6 +1339,14 @@ const std::vector<LocalUrlHandler> &InternalUrlHandlers() {
 		{
 			u"^edit_personal_channel$"_q,
 			ShowEditPersonalChannel,
+		},
+		{
+			u"^collectible_phone/([\\+0-9\\-\\s]+)@([0-9]+)$"_q,
+			ShowCollectiblePhone,
+		},
+		{
+			u"^collectible_username/([a-zA-Z0-9\\-\\_\\.]+)@([0-9]+)$"_q,
+			ShowCollectibleUsername,
 		},
 	};
 	return Result;
