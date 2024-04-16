@@ -2023,10 +2023,10 @@ void SessionController::resizeForThirdSection() {
 
 	auto &settings = Core::App().settings();
 	auto layout = computeColumnLayout();
-	auto tabbedSelectorSectionEnabled =
-		settings.tabbedSelectorSectionEnabled();
-	auto thirdSectionInfoEnabled =
-		settings.thirdSectionInfoEnabled();
+	auto tabbedSelectorSectionEnabled
+		= settings.tabbedSelectorSectionEnabled();
+	auto thirdSectionInfoEnabled
+		= settings.thirdSectionInfoEnabled();
 	settings.setTabbedSelectorSectionEnabled(false);
 	settings.setThirdSectionInfoEnabled(false);
 
