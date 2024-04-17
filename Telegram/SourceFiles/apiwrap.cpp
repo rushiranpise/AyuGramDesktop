@@ -291,6 +291,12 @@ void ApiWrap::topPromotionDone(const MTPhelp_PromoData &proxy) {
 		base::unixtime::now(),
 		_topPromotionNextRequestTime);
 
+	const auto settings = &AyuSettings::getInstance();
+	if (settings->disableAds) {
+		_session->data().setTopPromoted(nullptr, QString(), QString());
+		return;
+	}
+
 	proxy.match([&](const MTPDhelp_promoDataEmpty &data) {
 		_session->data().setTopPromoted(nullptr, QString(), QString());
 	}, [&](const MTPDhelp_promoData &data) {
