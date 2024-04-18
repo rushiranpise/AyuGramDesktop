@@ -720,6 +720,8 @@ void MainMenu::showFinished() {
 void MainMenu::setupMenu() {
 	using namespace Settings;
 
+	const auto settings = &AyuSettings::getInstance();
+
 	const auto controller = _controller;
 	const auto addAction = [&](
 			rpl::producer<QString> text,
@@ -760,7 +762,7 @@ void MainMenu::setupMenu() {
 		const auto selfId = controller->session().userPeerId();
 		const auto stories = &controller->session().data().stories();
 		if (stories->archiveCount(selfId) > 0) {
-			wrap->toggle(true, anim::type::instant);
+			wrap->toggle(!settings->disableStories, anim::type::instant);
 		} else {
 			wrap->toggle(false, anim::type::instant);
 			if (!stories->archiveCountKnown(selfId)) {
@@ -769,7 +771,7 @@ void MainMenu::setupMenu() {
 				) | rpl::filter(
 					rpl::mappers::_1 == selfId
 				) | rpl::map([=] {
-					return stories->archiveCount(selfId) > 0;
+					return stories->archiveCount(selfId) > 0 && !settings->disableStories;
 				}) | rpl::filter(rpl::mappers::_1) | rpl::take(1));
 			}
 		}
@@ -888,7 +890,6 @@ void MainMenu::setupMenu() {
 			toggle);
 	}, _nightThemeToggle->lifetime());
 
-	const auto settings = &AyuSettings::getInstance();
 	if (settings->showGhostToggleInDrawer) {
 		_ghostModeToggle = addAction(
 			tr::ayu_GhostModeToggle(),
