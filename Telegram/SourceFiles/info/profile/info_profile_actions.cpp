@@ -127,6 +127,8 @@ base::options::toggle ShowPeerIdBelowAbout({
 		const QString &addToLink) {
 	const auto weak = base::make_weak(controller);
 	return [=](QString link) {
+		auto settings = &AyuSettings::getInstance();
+
 		if (link.startsWith(u"internal:"_q)) {
 			Core::App().openInternalUrl(link,
 				QVariant::fromValue(ClickHandlerContext{
@@ -138,9 +140,15 @@ base::options::toggle ShowPeerIdBelowAbout({
 				+ addToLink;
 		}
 		if (!link.isEmpty()) {
+			if (!settings->copyUsernameAsLink && addToLink.isEmpty()) {
+				link = '@' + link.replace("https://t.me/", "");
+			}
+
 			QGuiApplication::clipboard()->setText(link);
 			if (const auto window = weak.get()) {
-				window->showToast(tr::lng_username_copied(tr::now));
+				window->showToast(settings->copyUsernameAsLink
+									  ? tr::lng_username_copied(tr::now) // "Link copied to clipboard."
+									  : tr::lng_text_copied(tr::now)); // "Text copied to clipboard."
 			}
 		}
 	};
