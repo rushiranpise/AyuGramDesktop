@@ -230,7 +230,7 @@ PreviewWrap::PreviewWrap(
 					lt_user,
 					rpl::single(
 						item->history()->peer->shortName()
-					) | rpl::map(Ui::Text::RichLangValue),
+					) | Ui::Text::ToRichLangValue(),
 					Ui::Text::RichLangValue)
 			: (isRound
 				? settings->saveDeletedMessages ? tr::ayu_ExpiringVideoMessageNote : tr::lng_ttl_round_tooltip_in
