@@ -2150,7 +2150,7 @@ void Widget::searchMessages(QString query, Key inChat, UserData *from) {
 
 	if (inChat && from) {
 		setSearchInChat(inChat, from);
-		applyFilterUpdate(true);
+		applySearchUpdate(true);
 	}
 }
 
