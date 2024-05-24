@@ -1654,7 +1654,8 @@ void SetupThemeSettings(
 	AddPeerColorButton(
 		container,
 		controller->uiShow(),
-		controller->session().user());
+		controller->session().user(),
+		st::settingsColorButton);
 
 	const auto settings = &Core::App().settings();
 	if (settings->systemDarkMode().has_value()) {
