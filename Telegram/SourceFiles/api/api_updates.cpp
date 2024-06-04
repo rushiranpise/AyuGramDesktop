@@ -1145,7 +1145,9 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
 				MTP_int(d.vttl_period().value_or_empty()),
-				MTPint()), // quick_reply_shortcut_id
+				MTPint(), // quick_reply_shortcut_id
+				MTPlong(), // effect
+				MTPFactCheck()),
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -1180,7 +1182,9 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
 				MTP_int(d.vttl_period().value_or_empty()),
-				MTPint()), // quick_reply_shortcut_id
+				MTPint(), // quick_reply_shortcut_id
+				MTPlong(), // effect
+				MTPFactCheck()),
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -2616,6 +2620,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	case mtpc_updateStoriesStealthMode: {
 		const auto &data = update.c_updateStoriesStealthMode();
 		_session->data().stories().apply(data.vstealth_mode());
+	} break;
+
+	case mtpc_updateStarsBalance: {
+		const auto &data = update.c_updateStarsBalance();
+		_session->setCredits(data.vbalance().v);
 	} break;
 
 	}
