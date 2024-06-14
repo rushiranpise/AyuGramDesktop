@@ -228,11 +228,7 @@ RepliesWidget::RepliesWidget(
 			listShowPremiumToast(emoji);
 		},
 		.mode = ComposeControls::Mode::Normal,
-		.sendMenuDetails = [=] {
-			using Type = SendMenu::Type;
-			const auto type = _topic ? Type::Scheduled : Type::SilentOnly;
-			return SendMenu::Details{ .type = type };
-		},
+		.sendMenuDetails = [=] { return sendMenuDetails(); },
 		.regularWindow = controller,
 		.stickerOrEmojiChosen = controller->stickerOrEmojiChosen(),
 		.scheduledToggleValue = _topic
@@ -963,7 +959,7 @@ bool RepliesWidget::confirmSendingFiles(
 		_composeControls->getTextWithAppliedMarkdown(),
 		_history->peer,
 		Api::SendType::Normal,
-		SendMenu::Details{ SendMenu::Type::SilentOnly }); // #TODO replies schedule
+		sendMenuDetails());
 
 	box->setConfirmedCallback(crl::guard(this, [=](
 			Ui::PreparedList &&list,
@@ -1096,7 +1092,6 @@ void RepliesWidget::checkReplyReturns() {
 void RepliesWidget::uploadFile(
 		const QByteArray &fileContent,
 		SendMediaType type) {
-	// #TODO replies schedule
 	session().api().sendFile(fileContent, type, prepareSendAction({}));
 }
 
@@ -1146,7 +1141,7 @@ bool RepliesWidget::showSendingFilesError(
 }
 
 Api::SendAction RepliesWidget::prepareSendAction(
-	Api::SendOptions options) const {
+		Api::SendOptions options) const {
 	auto result = Api::SendAction(_history, options);
 	result.replyTo = replyTo();
 	result.options.sendAs = _composeControls->sendAsPeer();
@@ -1158,11 +1153,6 @@ void RepliesWidget::send() {
 		return;
 	}
 	send({});
-	// #TODO replies schedule
-	//const auto callback = [=](Api::SendOptions options) { send(options); };
-	//Ui::show(
-	//	PrepareScheduleBox(this, sendMenuType(), callback),
-	//	Ui::LayerOption::KeepOther);
 }
 
 void RepliesWidget::sendVoice(ComposeControls::VoiceToSend &&data) {
@@ -1346,13 +1336,6 @@ void RepliesWidget::refreshJoinGroupButton() {
 void RepliesWidget::sendExistingDocument(
 		not_null<DocumentData*> document) {
 	sendExistingDocument(document, {}, std::nullopt);
-	// #TODO replies schedule
-	//const auto callback = [=](Api::SendOptions options) {
-	//	sendExistingDocument(document, options);
-	//};
-	//Ui::show(
-	//	PrepareScheduleBox(this, sendMenuType(), callback),
-	//	Ui::LayerOption::KeepOther);
 }
 
 bool RepliesWidget::sendExistingDocument(
@@ -1382,13 +1365,6 @@ bool RepliesWidget::sendExistingDocument(
 
 void RepliesWidget::sendExistingPhoto(not_null<PhotoData*> photo) {
 	sendExistingPhoto(photo, {});
-	// #TODO replies schedule
-	//const auto callback = [=](Api::SendOptions options) {
-	//	sendExistingPhoto(photo, options);
-	//};
-	//Ui::show(
-	//	PrepareScheduleBox(this, sendMenuType(), callback),
-	//	Ui::LayerOption::KeepOther);
 }
 
 bool RepliesWidget::sendExistingPhoto(
@@ -1459,13 +1435,9 @@ void RepliesWidget::sendInlineResult(
 }
 
 SendMenu::Details RepliesWidget::sendMenuDetails() const {
-	// #TODO replies schedule
-	const auto type = _history->peer->isSelf()
-		? SendMenu::Type::Reminder
-		: HistoryView::CanScheduleUntilOnline(_history->peer)
-		? SendMenu::Type::ScheduledToUser
-		: SendMenu::Type::Scheduled;
-	return { .type = type, .effectAllowed = _history->peer->isUser() };
+	using Type = SendMenu::Type;
+	const auto type = _topic ? Type::Scheduled : Type::SilentOnly;
+	return SendMenu::Details{ .type = type };
 }
 
 FullReplyTo RepliesWidget::replyTo() const {
@@ -2648,6 +2620,11 @@ QString RepliesWidget::listElementAuthorRank(not_null<const Element*> view) {
 	return (_topic && view->data()->from()->id == _topic->creatorId())
 		? tr::lng_topic_author_badge(tr::now)
 		: QString();
+}
+
+bool RepliesWidget::listElementHideTopicButton(
+		not_null<const Element*> view) {
+	return true;
 }
 
 History *RepliesWidget::listTranslateHistory() {

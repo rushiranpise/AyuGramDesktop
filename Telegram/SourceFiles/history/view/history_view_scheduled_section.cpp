@@ -1458,6 +1458,11 @@ QString ScheduledWidget::listElementAuthorRank(
 	return {};
 }
 
+bool ScheduledWidget::listElementHideTopicButton(
+		not_null<const Element*> view) {
+	return true;
+}
+
 History *ScheduledWidget::listTranslateHistory() {
 	return nullptr;
 }

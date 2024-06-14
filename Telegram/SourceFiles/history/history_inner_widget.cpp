@@ -329,6 +329,10 @@ public:
 		return {};
 	}
 
+	bool elementHideTopicButton(not_null<const Element*> view) override {
+		return false;
+	}
+
 	not_null<HistoryView::ElementDelegate*> delegate() override {
 		return this;
 	}
@@ -4366,10 +4370,16 @@ void HistoryInner::deleteAsGroup(FullMsgId itemId) {
 		const auto group = session().data().groups().find(item);
 		if (!group) {
 			return deleteItem(item);
+		} else if (CanCreateModerateMessagesBox(group->items)) {
+			_controller->show(Box(
+				CreateModerateMessagesBox,
+				group->items,
+				nullptr));
+		} else {
+			_controller->show(Box<DeleteMessagesBox>(
+				&session(),
+				session().data().itemsToIds(group->items)));
 		}
-		_controller->show(Box<DeleteMessagesBox>(
-			&session(),
-			session().data().itemsToIds(group->items)));
 	}
 }
 

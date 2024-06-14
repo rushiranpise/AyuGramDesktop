@@ -165,7 +165,7 @@ QImage GenerateStars(int height, int count) {
 void FillCreditOptions(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
-		int minCredits,
+		int minimumCredits,
 		Fn<void()> paid) {
 	const auto options = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -191,6 +191,10 @@ void FillCreditOptions(
 			- st.iconLeft
 			- singleStarWidth;
 		const auto buttonHeight = st.height + rect::m::sum::v(st.padding);
+		const auto minCredits = (!options.empty()
+				&& (minimumCredits > options.back().credits))
+			? 0
+			: minimumCredits;
 		for (auto i = 0; i < options.size(); i++) {
 			const auto &option = options[i];
 			if (option.credits < minCredits) {
@@ -269,10 +273,11 @@ void FillCreditOptions(
 		{
 			auto text = tr::lng_credits_summary_options_about(
 				lt_link,
-				tr::lng_credits_summary_options_about_link(
-				) | rpl::map([](const QString &t) {
-					using namespace Ui::Text;
-					return Link(t, u"https://telegram.org/tos"_q);
+				rpl::combine(
+					tr::lng_credits_summary_options_about_link(),
+					tr::lng_credits_summary_options_about_url()
+				) | rpl::map([](const QString &text, const QString &url) {
+					return Ui::Text::Link(text, url);
 				}),
 				Ui::Text::RichLangValue);
 			Ui::AddSkip(content);
