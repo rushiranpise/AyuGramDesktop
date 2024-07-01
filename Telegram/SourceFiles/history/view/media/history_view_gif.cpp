@@ -195,6 +195,8 @@ Gif::Gif(
 		}
 	}
 	ensureTranscribeButton();
+
+	_purchasedPriceTag = hasPurchasedTag();
 }
 
 Gif::~Gif() {
@@ -666,6 +668,10 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 
 	const auto skipDrawingSurrounding = context.skipDrawingParts
 		== PaintContext::SkipDrawingParts::Surrounding;
+
+	if (!skipDrawingSurrounding && _purchasedPriceTag) {
+		drawPurchasedTag(p, rthumb, context);
+	}
 
 	if (!unwrapped && !skipDrawingSurrounding && !AyuFeatures::MessageShot::ignoreRender(AyuFeatures::MessageShot::RenderPart::Date)) {
 		if (!isRound || !inWebPage) {

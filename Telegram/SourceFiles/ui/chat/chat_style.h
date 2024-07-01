@@ -352,6 +352,9 @@ public:
 	[[nodiscard]] const style::TextPalette &serviceTextPalette() const {
 		return _serviceTextPalette;
 	}
+	[[nodiscard]] const style::TextPalette &priceTagTextPalette() const {
+		return _priceTagTextPalette;
+	}
 	[[nodiscard]] const style::icon &historyRepliesInvertedIcon() const {
 		return _historyRepliesInvertedIcon;
 	}
@@ -519,6 +522,7 @@ private:
 	style::TextPalette _historyPsaForwardPalette;
 	style::TextPalette _imgReplyTextPalette;
 	style::TextPalette _serviceTextPalette;
+	style::TextPalette _priceTagTextPalette;
 	style::icon _historyRepliesInvertedIcon = { Qt::Uninitialized };
 	style::icon _historyViewsInvertedIcon = { Qt::Uninitialized };
 	style::icon _historyViewsSendingIcon = { Qt::Uninitialized };

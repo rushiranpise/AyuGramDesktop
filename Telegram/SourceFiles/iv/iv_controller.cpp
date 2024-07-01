@@ -225,7 +225,7 @@ Controller::~Controller() {
 void Controller::updateTitleGeometry(int newWidth) const {
 	_subtitleWrap->setGeometry(
 		0,
-		st::windowTitleHeight,
+		0,
 		newWidth,
 		st::ivSubtitleHeight);
 	_subtitleWrap->paintRequest() | rpl::start_with_next([=](QRect clip) {
@@ -245,7 +245,7 @@ void Controller::updateTitleGeometry(int newWidth) const {
 }
 
 void Controller::initControls() {
-	_subtitleWrap = std::make_unique<Ui::RpWidget>(_window.get());
+	_subtitleWrap = std::make_unique<Ui::RpWidget>(_window->body().get());
 	_subtitleText = _index.value() | rpl::filter(
 		rpl::mappers::_1 >= 0
 	) | rpl::map([=](int index) {
@@ -279,7 +279,7 @@ void Controller::initControls() {
 	_back->toggledValue(
 	) | rpl::start_with_next([=](bool toggled) {
 		_subtitleLeft.start(
-			[=] { updateTitleGeometry(_window->width()); },
+			[=] { updateTitleGeometry(_window->body()->width()); },
 			toggled ? 0. : 1.,
 			toggled ? 1. : 0.,
 			st::fadeWrapDuration);
@@ -346,18 +346,16 @@ void Controller::createWindow() {
 	_window = std::make_unique<Ui::RpWindow>();
 	const auto window = _window.get();
 
-	base::qt_signal_producer(
-		window->window()->windowHandle(),
-		&QWindow::activeChanged
-	) | rpl::filter([=] {
-		return _webview && window->window()->windowHandle()->isActive();
+	window->windowActiveValue(
+	) | rpl::filter([=](bool active) {
+		return _webview && active;
 	}) | rpl::start_with_next([=] {
 		setInnerFocus();
 	}, window->lifetime());
 
 	initControls();
 
-	window->widthValue() | rpl::start_with_next([=](int width) {
+	window->body()->widthValue() | rpl::start_with_next([=](int width) {
 		updateTitleGeometry(width);
 	}, _subtitle->lifetime());
 
@@ -370,13 +368,13 @@ void Controller::createWindow() {
 		_delegate->ivSaveGeometry(window);
 	}, window->lifetime());
 
-	_container = Ui::CreateChild<Ui::RpWidget>(window->window());
+	_container = Ui::CreateChild<Ui::RpWidget>(window->body().get());
 	rpl::combine(
-		window->sizeValue(),
+		window->body()->sizeValue(),
 		_subtitleWrap->heightValue()
 	) | rpl::start_with_next([=](QSize size, int title) {
 		_container->setGeometry(QRect(QPoint(), size).marginsRemoved(
-			{ 0, title + st::windowTitleHeight, 0, 0 }));
+			{ 0, title, 0, 0 }));
 	}, _container->lifetime());
 
 	_container->paintRequest() | rpl::start_with_next([=](QRect clip) {
@@ -816,11 +814,10 @@ void Controller::showShareMenu() {
 	}
 
 	_shareWrap = std::make_unique<Ui::RpWidget>(_shareHidesContent
-		? _window->window()
+		? _window->body().get()
 		: nullptr);
-	const auto margins = QMargins(0, st::windowTitleHeight, 0, 0);
 	if (!_shareHidesContent) {
-		_shareWrap->setGeometry(_window->geometry().marginsRemoved(margins));
+		_shareWrap->setGeometry(_window->body()->rect());
 		_shareWrap->setWindowFlag(Qt::FramelessWindowHint);
 		_shareWrap->setAttribute(Qt::WA_TranslucentBackground);
 		_shareWrap->setAttribute(Qt::WA_NoSystemBackground);
@@ -828,14 +825,14 @@ void Controller::showShareMenu() {
 
 		_shareContainer.reset(QWidget::createWindowContainer(
 			_shareWrap->windowHandle(),
-			_window.get(),
+			_window->body().get(),
 			Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint));
 	}
-	_window->sizeValue() | rpl::start_with_next([=](QSize size) {
+	_window->body()->sizeValue() | rpl::start_with_next([=](QSize size) {
 		const auto widget = _shareHidesContent
 			? _shareWrap.get()
 			: _shareContainer.get();
-		widget->setGeometry(QRect(QPoint(), size).marginsRemoved(margins));
+		widget->setGeometry(QRect(QPoint(), size));
 	}, _shareWrap->lifetime());
 
 	auto result = _showShareBox({

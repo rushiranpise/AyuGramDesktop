@@ -516,22 +516,11 @@ Widget::Widget(
 	_a_opacity.start([this] { opacityAnimationCallback(); }, 0., 1., st::notifyFastAnim);
 }
 
-void Widget::destroyDelayed() {
-	hide();
-	if (_deleted) return;
-	_deleted = true;
-
-	// Ubuntu has a lag if a fully transparent widget is destroyed immediately.
-	base::call_delayed(1000, this, [this] {
-		manager()->removeWidget(this);
-	});
-}
-
 void Widget::opacityAnimationCallback() {
 	updateOpacity();
 	update();
 	if (!_a_opacity.animating() && _hiding) {
-		destroyDelayed();
+		manager()->removeWidget(this);
 	}
 }
 
@@ -1266,8 +1255,6 @@ HideAllButton::HideAllButton(
 
 	auto position = computePosition(st::notifyHideAllHeight);
 	updateGeometry(position.x(), position.y(), notifyWidth(), st::notifyHideAllHeight);
-	hide();
-	createWinId();
 
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
