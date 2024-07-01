@@ -35,6 +35,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+#include "styles/style_ayu_styles.h"
+
+
 namespace Ui::BotWebView {
 namespace {
 
@@ -324,7 +329,17 @@ Panel::Panel(
 , _widget(std::make_unique<SeparatePanel>())
 , _allowClipboardRead(allowClipboardRead) {
 	_widget->setWindowFlag(Qt::WindowStaysOnTopHint, false);
-	_widget->setInnerSize(st::botWebViewPanelSize);
+
+	const auto settings = &AyuSettings::getInstance();
+	auto size = QSize(st::botWebViewPanelSize);
+	if (settings->increaseWebviewHeight) {
+		size.setHeight(st::botWebViewPanelHeightIncreased);
+	}
+	if (settings->increaseWebviewWidth) {
+		size.setWidth(st::botWebViewPanelWidthIncreased);
+	}
+
+	_widget->setInnerSize(size);
 
 	_widget->closeRequests(
 	) | rpl::start_with_next([=] {

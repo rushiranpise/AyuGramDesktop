@@ -59,6 +59,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QSvgRenderer>
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
+
 namespace InlineBots {
 namespace {
 
@@ -429,6 +433,11 @@ void BotAction::handleKeyPress(not_null<QKeyEvent*> e) {
 	if (key == Qt::Key_Enter || key == Qt::Key_Return) {
 		setClicked(Ui::Menu::TriggeredSource::Keyboard);
 	}
+}
+
+QString WebviewPlatform() {
+	const auto settings = &AyuSettings::getInstance();
+	return settings->spoofWebviewAsAndroid ? "android" : "tdesktop";
 }
 
 } // namespace
@@ -901,7 +910,7 @@ void AttachWebView::request(const WebViewButton &button) {
 		MTP_bytes(button.url),
 		MTP_string(_startCommand),
 		MTP_dataJSON(MTP_bytes(Window::Theme::WebViewParams().json)),
-		MTP_string("tdesktop"),
+		MTP_string(WebviewPlatform()),
 		action.mtpReplyTo(),
 		(action.options.sendAs
 			? action.options.sendAs->input
@@ -1222,7 +1231,7 @@ void AttachWebView::requestSimple(const WebViewButton &button) {
 		MTP_bytes(button.url),
 		MTP_string(button.startCommand),
 		MTP_dataJSON(MTP_bytes(Window::Theme::WebViewParams().json)),
-		MTP_string("tdesktop")
+		MTP_string(WebviewPlatform())
 	)).done([=](const MTPWebViewResult &result) {
 		_requestId = 0;
 		const auto &data = result.data();
@@ -1300,7 +1309,7 @@ void AttachWebView::requestMenu(
 			MTP_string(url),
 			MTPstring(), // start_param
 			MTP_dataJSON(MTP_bytes(Window::Theme::WebViewParams().json)),
-			MTP_string("tdesktop"),
+			MTP_string(WebviewPlatform()),
 			action.mtpReplyTo(),
 			(action.options.sendAs
 				? action.options.sendAs->input
@@ -1430,7 +1439,7 @@ void AttachWebView::requestAppView(bool allowWrite) {
 		MTP_inputBotAppID(MTP_long(app->id), MTP_long(app->accessHash)),
 		MTP_string(_startCommand),
 		MTP_dataJSON(MTP_bytes(Window::Theme::WebViewParams().json)),
-		MTP_string("tdesktop")
+		MTP_string(WebviewPlatform())
 	)).done([=](const MTPWebViewResult &result) {
 		_requestId = 0;
 		const auto &data = result.data();
