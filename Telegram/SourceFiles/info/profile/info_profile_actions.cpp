@@ -79,6 +79,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/ui/utils/ayu_profile_values.h"
+#include "ayu/utils/telegram_helpers.h"
 #include "ui/text/text_entity.h"
 
 
@@ -1155,6 +1156,9 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 		}
 
 		if (settings->showPeerId != 0) {
+			const auto dataCenter = getUserDC(user);
+			const auto idLabel = dataCenter.isEmpty() ? QString("ID") : dataCenter;
+
 			auto idDrawableText = IDValue(
 				user
 			) | rpl::map([](TextWithEntities &&text)
@@ -1162,7 +1166,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 				return Ui::Text::Code(text.text);
 			});
 			auto idInfo = addInfoOneLine(
-				rpl::single(QString("ID")),
+				rpl::single(idLabel),
 				std::move(idDrawableText),
 				tr::ayu_ContextCopyID(tr::now)
 			);
