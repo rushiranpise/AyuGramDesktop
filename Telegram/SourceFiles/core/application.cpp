@@ -109,6 +109,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 
+// AyuGram includes
+#include "ayu/features/streamer_mode/streamer_mode.h"
+
+
 namespace Core {
 namespace {
 
@@ -505,6 +509,10 @@ void Application::processCreatedWindow(
 		not_null<Window::Controller*> window) {
 	window->openInMediaViewRequests(
 	) | rpl::start_to_stream(_openInMediaViewRequests, window->lifetime());
+
+	if (AyuFeatures::StreamerMode::isEnabled()) {
+		AyuFeatures::StreamerMode::hideWidgetWindow(window->widget());
+	}
 }
 
 void Application::startMediaView() {
